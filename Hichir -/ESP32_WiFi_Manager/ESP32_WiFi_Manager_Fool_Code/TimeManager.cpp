@@ -21,7 +21,7 @@ String TimeManager::formatTimeHHMM(const struct tm& ti) {
   return String(buf);
 }
 
-// Ֆունկցիա, որը մշակում է "W0T08:00" ... "W6T23:59" ֆորմատը
+// Ֆունկցիա, որը մշակում է "W0T08:00" ... "W6T23:59" և "W7T08:00" ամենօրյա ֆորմատը։
 bool TimeManager::parseWeekdayTime(
   const String& s,
   int& outWeekday, int& outH, int& outM
@@ -41,7 +41,7 @@ bool TimeManager::parseWeekdayTime(
   int hour = timePart.substring(0, colon).toInt();
   int min = timePart.substring(colon + 1).toInt();
 
-  if (weekday < 0 || weekday > 6 || hour < 0 || hour > 23 || min < 0 || min > 59) {
+  if (weekday < 0 || weekday > 7 || hour < 0 || hour > 23 || min < 0 || min > 59) {
     return false;
   }
 

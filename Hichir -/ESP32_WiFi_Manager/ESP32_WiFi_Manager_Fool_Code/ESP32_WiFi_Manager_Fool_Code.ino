@@ -390,7 +390,7 @@ static bool shouldBuzzNow(int weekdayNow, int hNow, int mNow) {
   if (medCount <= 0) return false;
   for (int i = 0; i < medCount; i++) {
     for (int t = 0; t < medTimeCount[i]; t++) {
-      if (medWeekdays[i][t] == weekdayNow && medHours[i][t] == hNow &&
+      if ((medWeekdays[i][t] == weekdayNow || medWeekdays[i][t] == 7) && medHours[i][t] == hNow &&
           medMinutes[i][t] == mNow) {
         return true;
       }
@@ -402,7 +402,7 @@ static bool shouldBuzzNow(int weekdayNow, int hNow, int mNow) {
 static int findMatchingMedIndex(int weekdayNow, int hNow, int mNow) {
   for (int i = 0; i < medCount; i++) {
     for (int t = 0; t < medTimeCount[i]; t++) {
-      if (medWeekdays[i][t] == weekdayNow && medHours[i][t] == hNow &&
+      if ((medWeekdays[i][t] == weekdayNow || medWeekdays[i][t] == 7) && medHours[i][t] == hNow &&
           medMinutes[i][t] == mNow) return i;
     }
   }
@@ -617,6 +617,22 @@ void setup() {
     saveMedicines();
     request->send(200, "text/plain", "OK");
     trackEvent("medicine_updated", name, idx1, "success", "count=" + String(count));
+  });
+
+  server.on("/medsList", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String json = "{\"items\":[";
+    bool first = true;
+    for (int i = 0; i < medCount; i++) {
+      if (medNames[i] == "" && medCounts[i] <= 0 && medTimeCount[i] <= 0) continue;
+      if (!first) json += ",";
+      first = false;
+      json += "{\"box\":" + String(i + 1);
+      json += ",\"name\":\"" + jsonEscape(medNames[i]) + "\"";
+      json += ",\"count\":" + String(medCounts[i]);
+      json += "}";
+    }
+    json += "]}";
+    request->send(200, "application/json", json);
   });
 
   server.on("/fill", HTTP_GET, [](AsyncWebServerRequest *request) {

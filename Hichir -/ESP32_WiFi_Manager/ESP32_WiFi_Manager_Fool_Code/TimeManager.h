@@ -18,7 +18,7 @@ public:
     bool syncTimeIfNeeded();
     String formatTimeHHMM(const struct tm& ti);
     
-    // Կարդում է կրկնվող շաբաթվա օր + ժամ ֆորմատը՝ W0T08:00 ... W6T23:59։
+    // Կարդում է կրկնվող օր + ժամ ֆորմատը՝ W0T08:00 ... W6T23:59, W7T08:00 = ամեն օր։
     bool parseWeekdayTime(const String& s, int& outWeekday, int& outH, int& outM);
 
 private:

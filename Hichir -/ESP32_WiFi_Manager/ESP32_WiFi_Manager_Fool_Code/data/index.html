@@ -28,23 +28,104 @@ body.loaded { opacity: 1; }
 /* ── MAIN LAYOUT ── */
 .page-layout { display: flex; gap: 0; min-height: calc(100vh - 52px); }
 
-/* ── LEFT: med list ── */
-.left-col { flex: 1; padding: 20px; min-width: 0; }
-
-/* ── RIGHT: schedule sidebar ── */
-.schedule-sidebar {
-  width: 300px;
-  min-width: 300px;
+/* ── LEFT: menu bar ── */
+.side-menu-bar {
+  position: sticky;
+  top: 52px;
+  height: calc(100vh - 52px);
+  width: 56px;
+  min-width: 56px;
   background: white;
-  border-left: 2px solid #e8edf3;
+  border-right: 1px solid #e8edf3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 6px;
+  z-index: 150;
+}
+.menu-toggle-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: var(--primary-blue);
+  color: white;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.menu-toggle-btn:hover { background: var(--purple-accent); }
+.menu-dropdown {
+  display: none;
+  flex-direction: column;
+  gap: 8px;
+  width: min(280px, calc(100vw - 72px));
+  position: fixed;
+  left: 62px;
+  top: 64px;
+  background: white;
+  padding: 10px;
+  border-radius: 14px;
+  box-shadow: 0 10px 32px rgba(0,0,0,0.14);
+  border: 1px solid #e2e8f0;
+  z-index: 600;
+}
+.menu-dropdown.open { display: flex; }
+.menu-dropdown button {
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-blue);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.menu-dropdown button:hover { background: #eef4ff; }
+.menu-dropdown button.active { background: var(--primary-blue); color: white; }
+
+/* ── Side panels (opened from menu) ── */
+.side-panel {
+  width: 320px;
+  min-width: 320px;
+  background: white;
+  border-right: 2px solid #e8edf3;
   padding: 0;
   position: sticky;
   top: 52px;
   height: calc(100vh - 52px);
   overflow-y: auto;
-  display: flex;
+  display: none;
   flex-direction: column;
 }
+.side-panel.panel-visible { display: flex; }
+
+.inventory-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border-left: 4px solid var(--muted-rose);
+}
+.inventory-item:last-child { margin-bottom: 0; }
+.inventory-name { font-size: 15px; font-weight: 700; color: var(--text-main); flex: 1; min-width: 0; word-break: break-word; }
+.inventory-meta { text-align: right; flex-shrink: 0; }
+.inventory-box { font-size: 12px; color: var(--muted-rose); font-weight: 700; }
+.inventory-count { font-size: 22px; font-weight: 800; color: var(--primary-blue); line-height: 1.1; }
+.inventory-count-label { font-size: 11px; color: #6b7c93; font-weight: 600; }
+
+/* ── RIGHT: med list ── */
+.left-col { flex: 1; padding: 20px; min-width: 0; }
+
 .sidebar-header {
   background: var(--primary-blue);
   color: white;
@@ -57,31 +138,95 @@ body.loaded { opacity: 1; }
   position: sticky;
   top: 0;
 }
-.sidebar-body { padding: 12px; flex: 1; }
+.sidebar-body { padding: 12px 14px 20px; flex: 1; }
+.sidebar-hint { font-size: 12px; color: #6b7c93; margin: 0 0 12px; line-height: 1.4; }
 
-/* Day tabs in sidebar */
-.day-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
-.day-tab { padding: 6px 10px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: white; color: var(--primary-blue); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.day-tab.active { background: var(--purple-accent); color: white; border-color: var(--purple-accent); }
+.sched-timeline { display: flex; flex-direction: column; gap: 12px; }
+.sched-day-block {
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+.sched-day-block.today {
+  border-color: var(--primary-blue);
+  box-shadow: 0 4px 16px rgba(58,80,114,0.12);
+  background: linear-gradient(180deg, #eef4ff 0%, #f8fafc 100%);
+}
+.sched-day-block.tomorrow { border-color: #c7d2fe; }
 
-.sched-day-section { display: none; }
-.sched-day-section.visible { display: block; }
+.sched-day-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  background: white;
+  border-bottom: 1px solid #e8edf3;
+}
+.sched-day-block.today .sched-day-header { background: var(--primary-blue); color: white; }
+.sched-day-block.today .sched-day-sub,
+.sched-day-block.today .sched-day-badge { color: rgba(255,255,255,0.9); }
+.sched-day-block.today .sched-day-badge { background: rgba(255,255,255,0.2); color: white; }
 
+.sched-day-title { font-size: 15px; font-weight: 800; line-height: 1.2; }
+.sched-day-sub { font-size: 12px; color: #6b7c93; font-weight: 600; margin-top: 2px; }
+.sched-day-badge {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #edf2f7;
+  color: var(--primary-blue);
+}
+
+.sched-day-body { padding: 8px 10px 10px; }
 .sched-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 9px 10px;
-  background: #f8fafc;
+  padding: 10px 10px;
+  background: white;
   border-radius: 10px;
-  margin-bottom: 7px;
-  border-left: 3px solid var(--purple-accent);
+  margin-bottom: 6px;
+  border-left: 4px solid var(--purple-accent);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
-.sched-time { font-size: 18px; font-weight: 800; color: var(--primary-blue); min-width: 48px; }
-.sched-info { flex: 1; }
-.sched-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
-.sched-box { font-size: 11px; color: var(--muted-rose); font-weight: 600; }
-.sched-empty { text-align: center; color: #aab; font-size: 13px; padding: 20px 0; }
+.sched-item:last-child { margin-bottom: 0; }
+.sched-time {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary-blue);
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
+}
+.sched-info { flex: 1; min-width: 0; }
+.sched-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sched-box { font-size: 11px; color: var(--muted-rose); font-weight: 600; margin-top: 2px; }
+.sched-empty {
+  text-align: center;
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 14px 8px;
+  font-style: italic;
+}
+.sched-summary {
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  background: #fff;
+  border-radius: 10px;
+  border: 1px dashed #dde6ef;
+}
 
 /* ── CARDS ── */
 .card { background: white; padding: 22px; margin-bottom: 16px; border-radius: 18px; box-shadow: var(--card-shadow); border-left: 5px solid var(--purple-accent); }
@@ -122,7 +267,29 @@ input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(58,8
 .floating-add:hover { transform: scale(1.1) rotate(90deg); }
 .add-container { position: fixed; right: 24px; bottom: 24px; display: flex; align-items: center; gap: 10px; z-index: 100; }
 .add-hint-text { color: var(--muted-rose); font-size: 15px; font-weight: 700; animation: nudge 1.5s infinite; white-space: nowrap; }
-.info-floating { position: fixed; right: 24px; bottom: 104px; padding: 12px 18px; border: none; border-radius: 14px; background: var(--purple-accent); color: white; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(109,85,123,0.35); z-index: 99; }
+.manual-section-title {
+  color: var(--purple-accent);
+  margin: 18px 0 8px;
+  border-left: 5px solid var(--purple-accent);
+  padding-left: 12px;
+  font-weight: 700;
+  font-size: 16px;
+}
+.manual-section-title:first-child { margin-top: 0; }
+.manual-body { line-height: 1.65; font-size: 15px; color: var(--text-main); }
+.manual-body ul { margin: 8px 0 8px 18px; padding: 0; }
+.manual-body li { margin-bottom: 6px; }
+.manual-qr-box {
+  text-align: center;
+  padding: 18px;
+  background: #f8fafc;
+  border-radius: 16px;
+  margin: 14px 0 16px;
+  border: 1px solid #e2e8f0;
+}
+.manual-qr-box img { width: 180px; max-width: 100%; height: auto; border-radius: 10px; }
+.manual-lang { display: block; }
+.manual-lang.is-hidden { display: none; }
 
 /* ── MODALS ── */
 .modal { position: fixed; inset: 0; background: rgba(44,62,80,0.55); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; padding: 16px; z-index: 1000; }
@@ -237,9 +404,20 @@ input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(58,8
 
 /* ── RESPONSIVE ── */
 @media (max-width: 780px) {
-  .schedule-sidebar { display: none; }
-  .schedule-sidebar.mobile-open { display: flex; position: fixed; top: 0; right: 0; bottom: 0; width: 85vw; max-width: 320px; z-index: 500; box-shadow: -6px 0 30px rgba(0,0,0,0.15); }
-  .sidebar-overlay { display: block !important; }
+  .side-panel,
+  .side-panel.panel-visible { display: none !important; }
+  .side-panel.panel-visible.mobile-open {
+    display: flex !important;
+    position: fixed;
+    top: 52px;
+    left: 56px;
+    bottom: 0;
+    width: calc(100vw - 56px);
+    max-width: 320px;
+    z-index: 500;
+    box-shadow: 6px 0 30px rgba(0,0,0,0.15);
+  }
+  .menu-dropdown { left: 8px; right: 8px; width: auto; top: 58px; }
 }
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 499; }
 
@@ -253,7 +431,6 @@ input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(58,8
 <div class="topnav">
   <h1 id="navTitle">💊 ՀԻՇԻՐ</h1>
   <div style="display:flex;gap:10px;align-items:center;">
-    <button class="button btn-gray" id="schedToggleBtn" style="padding:8px 14px;font-size:14px;display:none;">📅</button>
     <button class="lang-btn" id="langBtn">ՀԱՅ</button>
   </div>
 </div>
@@ -261,25 +438,47 @@ input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(58,8
 <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
 <div class="page-layout">
-  <!-- LEFT -->
+  <aside class="side-menu-bar">
+    <button type="button" class="menu-toggle-btn" id="menuToggleBtn" title="Մենյու" aria-label="Մենյու">☰</button>
+    <nav class="menu-dropdown" id="menuDropdown">
+      <button type="button" data-menu="schedule" id="menuScheduleBtn">📅 Գրաֆիկ</button>
+      <button type="button" data-menu="inventory" id="menuInventoryBtn">💊 Դեղացանկ</button>
+      <button type="button" data-menu="manual" id="menuManualBtn">📖 Օգտագործման ձեռնարկ</button>
+      <button type="button" data-menu="info" id="menuInfoBtn">ℹ️ Տեղեկություն սարքի մասին</button>
+    </nav>
+  </aside>
+
+  <div class="side-panel" id="scheduleSidebar">
+    <div class="sidebar-header">
+      📅 <span id="sidebarTitle">Գրաֆիկ</span>
+      <button type="button" class="close-side-panel-btn" data-panel="schedule" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+    <div class="sidebar-body">
+      <p class="sidebar-hint" id="sidebarHint"></p>
+      <div class="sched-summary" id="sidebarSummary"></div>
+      <div class="sched-timeline" id="sidebarScheduleList"></div>
+    </div>
+  </div>
+
+  <div class="side-panel" id="inventorySidebar">
+    <div class="sidebar-header">
+      💊 <span id="inventoryTitle">Դեղացանկ</span>
+      <button type="button" class="close-side-panel-btn" data-panel="inventory" style="margin-left:auto;background:rgba(255,255,255,0.2);border:none;color:white;width:32px;height:32px;border-radius:8px;cursor:pointer;font-size:16px;">✕</button>
+    </div>
+    <div class="sidebar-body">
+      <p class="sidebar-hint" id="inventoryHint"></p>
+      <div class="sched-summary" id="inventorySummary"></div>
+      <div id="inventoryList"></div>
+    </div>
+  </div>
+
   <div class="left-col">
     <div id="medList"></div>
     <button class="button btn-gray" style="width:100%; margin-top:4px; padding:16px; font-size:17px; font-weight:bold;" id="filledBtn">✅ Լցրեցի բոլորը</button>
     <div style="height:100px;"></div>
   </div>
-
-  <!-- RIGHT SIDEBAR: always visible on desktop -->
-  <div class="schedule-sidebar" id="scheduleSidebar">
-    <div class="sidebar-header">📅 <span id="sidebarTitle">Գրաֆիկ</span></div>
-    <div class="sidebar-body">
-      <div class="day-tabs" id="sidebarDayTabs"></div>
-      <div id="sidebarDaySections"></div>
-    </div>
-  </div>
 </div>
 
-<!-- floating buttons -->
-<button class="info-floating" id="infoBtn">ℹ️</button>
 <div class="add-container">
   <div class="add-hint-text" id="addHint">Ավելացնել տուփ ➜</div>
   <button class="floating-add" id="addMedBtn">＋</button>
@@ -291,6 +490,90 @@ input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(58,8
     <h3 id="modalBoxTitle" style="color:var(--primary-blue);margin:0 0 4px;font-size:20px;">Ընտրիր տուփի համար</h3>
     <div class="grid" id="boxGrid"></div>
     <button id="closeBox" class="button btn-red" style="margin-top:22px;width:100%;">✕ Փակել</button>
+  </div>
+</div>
+
+<!-- MANUAL MODAL -->
+<div class="modal" id="manualModal">
+  <div class="modal-box" style="text-align:left;max-height:88vh;overflow-y:auto;max-width:560px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #edf2f7;padding-bottom:12px;">
+      <h2 id="manualModalTitle" style="margin:0;color:var(--primary-blue);font-size:20px;">📖 Օգտագործման ձեռնարկ</h2>
+      <button type="button" id="closeManual" class="button btn-red" style="padding:7px 13px;">✕</button>
+    </div>
+    <div class="manual-lang manual-hy" id="manualContentHy">
+      <div class="manual-qr-box">
+        <img src="Manual QR.png" alt="Ձեռնարկի QR">
+        <p id="manualQrHint" style="margin-top:10px;font-size:14px;color:var(--primary-blue);font-weight:bold;">Սկանավորեք՝ ամբողջական ձեռնարկը բացելու համար</p>
+        <a href="https://drive.google.com/file/d/1D1Xbme6QUoO6-udsgjBSMfot3lXrhag4/view?usp=drive_link" target="_blank" rel="noopener noreferrer" class="tg-link" id="manualPdfLink">🔗 Բացել ամբողջական ձեռնարկը</a>
+      </div>
+      <p style="margin-top:0;color:#64748b;font-size:14px;">Wi‑Fi կարգավորում, WEB միջավայր և դեղերի հիշեցումների ավելացում</p>
+      <div class="manual-body">
+        <div class="manual-section-title">Նախքան սկսելը</div>
+        <ul>
+          <li>Սարքը միացրեք հոսանքին և պահեք հեռախոսը կամ համակարգիչը սարքին մոտ։</li>
+          <li>Պատրաստեք տան Wi‑Fi-ի անունը, գաղտնաբառը և Telegram Chat ID-ն։</li>
+          <li>Եթե էջը չի բացվում, ստուգեք, որ միացված եք ճիշտ Wi‑Fi ցանցին։</li>
+        </ul>
+        <div class="manual-section-title">Առաջին միացում և Wi‑Fi կարգավորում</div>
+        <p><b>1.</b> Միացրեք սարքը հոսանքին։ Սպասեք մի քանի վայրկյան, մինչև գործարկվի։ Առաջին կարգավորման ժամանակ սարքը ստեղծում է «ՀԻՇԻՐ» Wi‑Fi ցանցը։</p>
+        <p><b>2.</b> Wi‑Fi ցանկում ընտրեք «ՀԻՇԻՐ» ցանցը։ Browser-ում գրեք՝ <b>192.168.4.1</b></p>
+        <p><b>3.</b> Լրացրեք տան Wi‑Fi-ի անունը, գաղտնաբառը և Telegram Chat ID-ն, սեղմեք «Պահպանել»։</p>
+        <p><b>Կարևոր՝</b> Պահպանումից հետո նորից միացեք տան Wi‑Fi-ին։ Եթե WEB էջը չի բացվում, նայեք սարքի էկրանին ցուցադրված IP հասցեն։</p>
+        <div class="manual-section-title">WEB միջավայրում մուտք և դեղի ավելացում</div>
+        <p><b>4.</b> Գրանցվեք WEB միջավայրում (մուտքանուն և գաղտնաբառ), սեղմեք «Մուտք»։</p>
+        <p><b>5.</b> Սեղմեք «+» նշանը, ընտրեք տուփի համարը և լրացրեք դեղի տվյալները։</p>
+        <p><b>6.</b> Գրեք դեղի անունը, քանակը, ընդունման շաբաթվա օրը և ժամը։ Սեղմեք «Լցնել դեղատուփը», ապա «Լցրեցի բոլորը» և «Հաստատել»։</p>
+        <div class="manual-section-title">Հիշեցման պահին</div>
+        <ul>
+          <li>Նշված ժամին էկրանին երևում է դեղի տվյալը, միանում են ձայնային և լուսային ազդանշանները։</li>
+          <li>Telegram-ում ուղարկվում է ծանուցում։</li>
+          <li>Դեղը վերցնելուց հետո սեղմեք սարքի «*» կոճակը՝ buzzer-ը անջատելու համար։</li>
+        </ul>
+        <div class="manual-section-title">Արագ խնդիրների լուծում</div>
+        <ul>
+          <li>WEB էջը չի բացվում՝ ստուգեք Wi‑Fi կապը և IP հասցեն։</li>
+          <li>Telegram ծանուցում չկա՝ ստուգեք Chat ID-ն և ինտերնետ կապը։</li>
+          <li>Դեղի տվյալները չեն պահպանվել՝ կրկին սեղմեք «Հաստատել» և թարմացրեք էջը։</li>
+        </ul>
+      </div>
+    </div>
+    <div class="manual-lang manual-en is-hidden" id="manualContentEn">
+      <div class="manual-qr-box">
+        <img src="Manual QR.png" alt="Manual QR">
+        <p id="manualQrHintEn" style="margin-top:10px;font-size:14px;color:var(--primary-blue);font-weight:bold;">Scan for the full manual</p>
+        <a href="https://drive.google.com/file/d/1D1Xbme6QUoO6-udsgjBSMfot3lXrhag4/view?usp=drive_link" target="_blank" rel="noopener noreferrer" class="tg-link" id="manualPdfLinkEn">🔗 Open full manual</a>
+      </div>
+      <p style="margin-top:0;color:#64748b;font-size:14px;">Wi‑Fi setup, web interface and adding medicine reminders</p>
+      <div class="manual-body">
+        <div class="manual-section-title">Before you start</div>
+        <ul>
+          <li>Plug in the device and keep your phone or computer nearby.</li>
+          <li>Prepare your home Wi‑Fi name, password and Telegram Chat ID.</li>
+          <li>If the page does not open, check that you are on the correct Wi‑Fi network.</li>
+        </ul>
+        <div class="manual-section-title">First setup and Wi‑Fi</div>
+        <p><b>1.</b> Power on the device and wait a few seconds. On first setup it creates the «HISHIR» Wi‑Fi network.</p>
+        <p><b>2.</b> Connect to «HISHIR» and open <b>192.168.4.1</b> in your browser.</p>
+        <p><b>3.</b> Enter home Wi‑Fi credentials and Telegram Chat ID, then press Save.</p>
+        <p><b>Important:</b> Reconnect to your home Wi‑Fi after saving. If the web page fails, check the IP on the device screen.</p>
+        <div class="manual-section-title">Web login and adding medicine</div>
+        <p><b>4.</b> Register and log in on the web page.</p>
+        <p><b>5.</b> Press «+», choose a box number and fill in medicine details.</p>
+        <p><b>6.</b> Enter name, quantity, weekday and time. Use Fill box, then I filled all, then Confirm.</p>
+        <div class="manual-section-title">At reminder time</div>
+        <ul>
+          <li>The screen shows the medicine; sound and light alerts activate.</li>
+          <li>A Telegram notification is sent.</li>
+          <li>Press «*» on the device after taking the medicine to stop the buzzer.</li>
+        </ul>
+        <div class="manual-section-title">Quick troubleshooting</div>
+        <ul>
+          <li>Web page won't open — check Wi‑Fi and IP address.</li>
+          <li>No Telegram message — check Chat ID and internet.</li>
+          <li>Data not saved — press Confirm again and refresh.</li>
+        </ul>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -326,46 +609,133 @@ const MAX = 7;
 const medList = document.getElementById('medList');
 const modal = document.getElementById('modal');
 const infoModal = document.getElementById('infoModal');
+const manualModal = document.getElementById('manualModal');
 const grid = document.getElementById('boxGrid');
 const langBtn = document.getElementById('langBtn');
 const scheduleSidebar = document.getElementById('scheduleSidebar');
+const inventorySidebar = document.getElementById('inventorySidebar');
 const sidebarOverlay = document.getElementById('sidebarOverlay');
-const schedToggleBtn = document.getElementById('schedToggleBtn');
+const menuToggleBtn = document.getElementById('menuToggleBtn');
+const menuDropdown = document.getElementById('menuDropdown');
+const menuScheduleBtn = document.getElementById('menuScheduleBtn');
+const menuInventoryBtn = document.getElementById('menuInventoryBtn');
+const menuManualBtn = document.getElementById('menuManualBtn');
+const menuInfoBtn = document.getElementById('menuInfoBtn');
 
 let currentLang = 'HY';
 let allMedsData = {};
-let activeSidebarDay = 0;
+const SCHEDULE_DAYS = 7;
+let menuOpen = false;
+let activeSidePanel = 'schedule';
 
-// Show toggle btn only on mobile
+function setMenuOpen(open) {
+  menuOpen = open;
+  menuDropdown.classList.toggle('open', menuOpen);
+}
+
+function toggleMenu() {
+  setMenuOpen(!menuOpen);
+}
+
+function closeMenu() {
+  setMenuOpen(false);
+}
+
+function updateSidePanelLayout() {
+  const mobile = window.innerWidth <= 780;
+  const scheduleOpen = activeSidePanel === 'schedule';
+  const inventoryOpen = activeSidePanel === 'inventory';
+  scheduleSidebar.classList.toggle('panel-visible', scheduleOpen);
+  inventorySidebar.classList.toggle('panel-visible', inventoryOpen);
+  scheduleSidebar.classList.toggle('mobile-open', scheduleOpen && mobile);
+  inventorySidebar.classList.toggle('mobile-open', inventoryOpen && mobile);
+  sidebarOverlay.style.display = (activeSidePanel && mobile) ? 'block' : 'none';
+  menuScheduleBtn.classList.toggle('active', scheduleOpen);
+  menuInventoryBtn.classList.toggle('active', inventoryOpen);
+}
+
+function setActiveSidePanel(panel) {
+  activeSidePanel = panel;
+  updateSidePanelLayout();
+  if (panel === 'schedule') buildSidebarSchedule();
+  if (panel === 'inventory') buildInventoryList();
+}
+
+function openSchedulePanel() {
+  closeMenu();
+  setActiveSidePanel(activeSidePanel === 'schedule' ? null : 'schedule');
+}
+
+function openInventoryPanel() {
+  closeMenu();
+  setActiveSidePanel(activeSidePanel === 'inventory' ? null : 'inventory');
+}
+
+function closeSidePanels() {
+  setActiveSidePanel(null);
+}
+
+function openManualModal() {
+  closeMenu();
+  closeSidePanels();
+  manualModal.classList.add('active');
+}
+
+function openInfoModal() {
+  closeMenu();
+  closeSidePanels();
+  infoModal.classList.add('active');
+}
+
+menuToggleBtn.onclick = (e) => {
+  e.stopPropagation();
+  toggleMenu();
+};
+
+menuScheduleBtn.onclick = openSchedulePanel;
+menuInventoryBtn.onclick = openInventoryPanel;
+menuManualBtn.onclick = openManualModal;
+menuInfoBtn.onclick = openInfoModal;
+document.querySelectorAll('.close-side-panel-btn').forEach(btn => {
+  btn.onclick = () => setActiveSidePanel(null);
+});
+
+document.getElementById('closeManual').onclick = () => manualModal.classList.remove('active');
+
+document.addEventListener('click', (e) => {
+  if (!menuOpen) return;
+  if (!menuDropdown.contains(e.target) && e.target !== menuToggleBtn) closeMenu();
+});
+
+sidebarOverlay.onclick = () => {
+  closeSidePanels();
+  closeMenu();
+};
+
 function checkMobile() {
-  if (window.innerWidth <= 780) { schedToggleBtn.style.display = ''; }
-  else { schedToggleBtn.style.display = 'none'; scheduleSidebar.classList.remove('mobile-open'); sidebarOverlay.style.display = 'none'; }
+  updateSidePanelLayout();
 }
 window.addEventListener('resize', checkMobile);
-checkMobile();
-
-schedToggleBtn.onclick = () => {
-  scheduleSidebar.classList.toggle('mobile-open');
-  sidebarOverlay.style.display = scheduleSidebar.classList.contains('mobile-open') ? 'block' : 'none';
-};
-sidebarOverlay.onclick = () => {
-  scheduleSidebar.classList.remove('mobile-open');
-  sidebarOverlay.style.display = 'none';
-};
 
 // ─── i18n ───
 const DAYS_HY = ['Կիր','Երկ','Երք','Չոր','Հնգ','Ուրբ','Շաբ'];
 const DAYS_HY_LONG = ['Կիրակի','Երկուշաբ.','Երեքշաբ.','Չորեքշաբ.','Հինգշաբ.','Ուրբաթ','Շաբաթ'];
 const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const DAYS_EN_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const MONTHS_HY = ['Հնվ','Փտր','Մրտ','Ապр','Մյս','Հնս','Հلس','Օգս','Սпт','Հкт','Նyм','Դкт'];
-const MONTHS_HY2 = ['Հնվ','Փտր','Մրտ','Ապ','Մյ','Հն','Հл','Ög','Սт','Հт','Нм','Дк'];
+const MONTHS_HY = ['Հուն','Փետ','Մար','Ապր','Մայ','Հուն','Հուլ','Օգս','Սեպ','Հոկ','Նոյ','Դեկ'];
 const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 const i18n = {
   HY: {
     navTitle:'💊 ՀԻՇԻՐ', filledBtn:'✅ Լցրեցի բոլորը', sidebarTitle:'Գրաֆիկ',
-    infoModalTitle:'ℹ️ Տեղեկություն', tgLinkText:'🔗 @HishiBot_bot',
+    menuSchedule:'📅 Գրաֆիկ', menuInventory:'💊 Դեղացանկ',
+    inventoryTitle:'Դեղացանկ', inventoryHint:'Սարքում ներառված դեղերի ցանկը',
+    inventorySummaryPrefix:'Ընդամենը', inventorySummarySuffix:'տուփ',
+    inventoryCountLabel:'հատ', inventoryNoMeds:'Դեղատուփեր չկան',
+    menuManual:'📖 Օգտագործման ձեռնարկ', menuInfo:'ℹ️ Տեղեկություն սարքի մասին',
+    manualModalTitle:'📖 Օգտագործման ձեռնարկ', manualQrHint:'Սկանավորեք՝ ամբողջական ձեռնարկը բացելու համար',
+    manualPdfLink:'🔗 Բացել ամբողջական ձեռնարկը',
+    infoModalTitle:'ℹ️ Տեղեկություն սարքի մասին', tgLinkText:'🔗 @HishiBot_bot',
     qrHintText:'Սկանավորեք կամ սեղմեք հղմանը',
     step1Title:'Քայլ 1. Telegram Բոտի ակտիվացում',
     step1Desc:'Սկանավորեք QR կոդը կամ սեղմեք հղմանը, անցեք բոտ և սեղմեք /start։',
@@ -382,11 +752,22 @@ const i18n = {
     viewCountUnit:'հատ', viewTimes:'📅 Օր/ժամ:', noSchedule:'Դեղ չկա',
     confirmDelete:'Ջնջե՞լ։', alertSuccess:'Լցվում է։ Քանակ՝ ',
     alertError:'Կապի սխալ։', actionConfirmed:'Հաստատվեց։',
-    days: DAYS_HY, daysLong: DAYS_HY_LONG, months: MONTHS_EN
+    everyDay:'Ամեն օր',
+    sidebarHint:'Հաջորդ 7 օրվա ընդունման գրաֆիկը',
+    todayLabel:'Այսօր', tomorrowLabel:'Վաղը',
+    summaryPrefix:'Ընդամենը', summarySuffix:'ընդունում',
+    days: DAYS_HY, daysLong: DAYS_HY_LONG, months: MONTHS_HY
   },
   EN: {
     navTitle:'💊 REMEMBER', filledBtn:'✅ I filled all', sidebarTitle:'Schedule',
-    infoModalTitle:'ℹ️ Information', tgLinkText:'🔗 @HishiBot_bot',
+    menuSchedule:'📅 Schedule', menuInventory:'💊 Medicine list',
+    inventoryTitle:'Medicine list', inventoryHint:'Medicines stored in the device',
+    inventorySummaryPrefix:'Total', inventorySummarySuffix:'boxes',
+    inventoryCountLabel:'pcs', inventoryNoMeds:'No medicine boxes',
+    menuManual:'📖 User manual', menuInfo:'ℹ️ About the device',
+    manualModalTitle:'📖 User manual', manualQrHint:'Scan for the full manual',
+    manualPdfLink:'🔗 Open full manual',
+    infoModalTitle:'ℹ️ About the device', tgLinkText:'🔗 @HishiBot_bot',
     qrHintText:'Scan or click the link to join',
     step1Title:'Step 1. Activate Telegram Bot',
     step1Desc:'Scan the QR code or click the link, go to the bot and press /start.',
@@ -403,66 +784,199 @@ const i18n = {
     viewCountUnit:'pcs', viewTimes:'📅 Weekday/time:', noSchedule:'No medicines scheduled.',
     confirmDelete:'Delete?', alertSuccess:'Filling box. Qty: ',
     alertError:'Connection error.', actionConfirmed:'Confirmed.',
+    everyDay:'Every day',
+    sidebarHint:'Medicine schedule for the next 7 days',
+    todayLabel:'Today', tomorrowLabel:'Tomorrow',
+    summaryPrefix:'Total', summarySuffix:'doses',
     days: DAYS_EN, daysLong: DAYS_EN_LONG, months: MONTHS_EN
   }
 };
 
-// ─── Sidebar schedule ───
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function formatCalendarDate(date, lang) {
+  const d = date.getDate();
+  const m = lang.months[date.getMonth()];
+  const wd = lang.daysLong[date.getDay()];
+  return wd + ', ' + d + ' ' + m;
+}
+
+function getDayLabel(offset, lang) {
+  if (offset === 0) return lang.todayLabel;
+  if (offset === 1) return lang.tomorrowLabel;
+  return '';
+}
+
+// ─── Sidebar schedule (calendar: today + next 6 days) ───
 function buildSidebarSchedule() {
-  const tabsEl = document.getElementById('sidebarDayTabs');
-  const sectionsEl = document.getElementById('sidebarDaySections');
-  tabsEl.innerHTML = '';
-  sectionsEl.innerHTML = '';
+  const listEl = document.getElementById('sidebarScheduleList');
+  const hintEl = document.getElementById('sidebarHint');
+  const summaryEl = document.getElementById('sidebarSummary');
+  if (!listEl) return;
 
   const lang = i18n[currentLang];
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    days.push({ weekday: i, items: [] });
+  if (hintEl) hintEl.textContent = lang.sidebarHint;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const calendarDays = [];
+  for (let i = 0; i < SCHEDULE_DAYS; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    calendarDays.push({ date: d, offset: i, weekday: d.getDay(), items: [] });
   }
 
-  // collect items
   for (const box in allMedsData) {
     const med = allMedsData[box];
+    const medName = med.name || (lang.medCardTitle + ' #' + box);
     med.dates.forEach(dt => {
       const [weekdayPart, timePart] = dt.split('T');
-      const weekday = weekdayPart && weekdayPart[0] === 'W' ? Number(weekdayPart.slice(1)) : -1;
-      const dayObj = days.find(d => d.weekday === weekday);
-      if (dayObj) dayObj.items.push({ time: timePart, name: med.name || (lang.medCardTitle+' #'+box), box });
+      if (!timePart) return;
+      const ruleWeekday = weekdayPart && weekdayPart[0] === 'W' ? Number(weekdayPart.slice(1)) : -1;
+      calendarDays.forEach(day => {
+        if (ruleWeekday === 7 || ruleWeekday === day.weekday) {
+          day.items.push({ time: timePart, name: medName, box });
+        }
+      });
     });
   }
 
-  days.forEach((day, idx) => {
-    // tab
-    const tab = document.createElement('button');
-    tab.className = 'day-tab' + (idx === activeSidebarDay ? ' active' : '');
-    const dayName = lang.days[day.weekday];
-    tab.innerHTML = '<div style="font-size:12px;font-weight:800;">'+dayName+'</div>';
-    tab.onclick = () => { activeSidebarDay = idx; buildSidebarSchedule(); };
-    tabsEl.appendChild(tab);
+  let totalDoses = 0;
+  listEl.innerHTML = '';
 
-    // section
-    const sec = document.createElement('div');
-    sec.className = 'sched-day-section' + (idx === activeSidebarDay ? ' visible' : '');
+  calendarDays.forEach(day => {
+    const seen = new Set();
+    const unique = [];
+    day.items.forEach(item => {
+      const key = item.box + '|' + item.time;
+      if (seen.has(key)) return;
+      seen.add(key);
+      unique.push(item);
+    });
+    unique.sort((a, b) => a.time.localeCompare(b.time));
+    totalDoses += unique.length;
 
-    if (day.items.length === 0) {
+    const block = document.createElement('div');
+    block.className = 'sched-day-block';
+    if (day.offset === 0) block.classList.add('today');
+    if (day.offset === 1) block.classList.add('tomorrow');
+
+    const headerTitle = day.offset <= 1 ? getDayLabel(day.offset, lang) : lang.daysLong[day.weekday];
+    const headerSub = formatCalendarDate(day.date, lang);
+    const badgeText = unique.length > 0 ? unique.length + ' 💊' : '—';
+
+    block.innerHTML =
+      '<div class="sched-day-header">' +
+        '<div><div class="sched-day-title">' + escapeHtml(headerTitle) + '</div>' +
+        '<div class="sched-day-sub">' + escapeHtml(headerSub) + '</div></div>' +
+        '<span class="sched-day-badge">' + badgeText + '</span>' +
+      '</div>' +
+      '<div class="sched-day-body"></div>';
+
+    const body = block.querySelector('.sched-day-body');
+    if (unique.length === 0) {
       const emp = document.createElement('div');
       emp.className = 'sched-empty';
       emp.textContent = lang.noSchedule;
-      sec.appendChild(emp);
+      body.appendChild(emp);
     } else {
-      day.items.sort((a,b) => a.time.localeCompare(b.time));
-      day.items.forEach(item => {
+      unique.forEach(item => {
         const row = document.createElement('div');
         row.className = 'sched-item';
         row.innerHTML =
-          '<div class="sched-time">'+item.time+'</div>' +
-          '<div class="sched-info"><div class="sched-name">'+item.name+'</div>' +
-          '<div class="sched-box">'+lang.boxText+' #'+item.box+'</div></div>';
-        sec.appendChild(row);
+          '<div class="sched-time">' + escapeHtml(item.time) + '</div>' +
+          '<div class="sched-info">' +
+            '<div class="sched-name">' + escapeHtml(item.name) + '</div>' +
+            '<div class="sched-box">' + escapeHtml(lang.boxText) + ' #' + item.box + '</div>' +
+          '</div>';
+        body.appendChild(row);
       });
     }
-    sectionsEl.appendChild(sec);
+    listEl.appendChild(block);
   });
+
+  if (summaryEl) {
+    summaryEl.textContent = lang.summaryPrefix + ' ' + totalDoses + ' ' + lang.summarySuffix;
+    summaryEl.style.display = totalDoses > 0 ? 'block' : 'none';
+  }
+}
+
+function getInventoryItemsFromCards() {
+  const lang = i18n[currentLang];
+  const items = [];
+  document.querySelectorAll('.card').forEach(card => {
+    const box = Number(card.dataset.box);
+    const stored = allMedsData[box] || {};
+    const nameIn = card.querySelector('.name-in');
+    const countIn = card.querySelector('.count-in');
+    const name = (nameIn && nameIn.value.trim()) || (stored.name && stored.name.trim()) || '';
+    const count = countIn && countIn.value !== '' ? Number(countIn.value) : Number(stored.count || 0);
+    if (name || count > 0 || (stored.dates && stored.dates.length > 0)) {
+      items.push({
+        box,
+        name: name || (lang.medCardTitle + ' #' + box),
+        count: isNaN(count) ? 0 : count
+      });
+    }
+  });
+  return items.sort((a, b) => a.box - b.box);
+}
+
+async function buildInventoryList() {
+  const listEl = document.getElementById('inventoryList');
+  const hintEl = document.getElementById('inventoryHint');
+  const summaryEl = document.getElementById('inventorySummary');
+  if (!listEl) return;
+
+  const lang = i18n[currentLang];
+  if (hintEl) hintEl.textContent = lang.inventoryHint;
+
+  let items = [];
+  try {
+    const response = await fetch('/medsList', { cache: 'no-store' });
+    if (response.ok) {
+      const data = await response.json();
+      items = Array.isArray(data.items) ? data.items : [];
+    }
+  } catch (err) {}
+
+  if (items.length === 0) items = getInventoryItemsFromCards();
+
+  listEl.innerHTML = '';
+  if (items.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'sched-empty';
+    empty.textContent = lang.inventoryNoMeds;
+    listEl.appendChild(empty);
+    if (summaryEl) summaryEl.style.display = 'none';
+    return;
+  }
+
+  let totalQty = 0;
+  items.forEach(item => {
+    const count = Number(item.count) || 0;
+    totalQty += count;
+    const row = document.createElement('div');
+    row.className = 'inventory-item';
+    row.innerHTML =
+      '<div class="inventory-name">' + escapeHtml(item.name) + '</div>' +
+      '<div class="inventory-meta">' +
+        '<div class="inventory-box">' + escapeHtml(lang.boxText) + ' #' + item.box + '</div>' +
+        '<div class="inventory-count">' + count + '</div>' +
+        '<div class="inventory-count-label">' + escapeHtml(lang.inventoryCountLabel) + '</div>' +
+      '</div>';
+    listEl.appendChild(row);
+  });
+
+  if (summaryEl) {
+    summaryEl.textContent = lang.inventorySummaryPrefix + ' ' + items.length + ' ' + lang.inventorySummarySuffix + ' · ' + totalQty + ' ' + lang.inventoryCountLabel;
+    summaryEl.style.display = 'block';
+  }
 }
 
 // ─── Language switch ───
@@ -472,8 +986,23 @@ function switchLanguage(lang) {
   for (let key in i18n[lang]) {
     if (typeof i18n[lang][key] !== 'string') continue;
     const el = document.getElementById(key);
-    if (el) el.innerHTML = i18n[lang][key];
+    if (el) {
+      if (key === 'sidebarHint' || key === 'inventoryHint') el.textContent = i18n[lang][key];
+      else el.innerHTML = i18n[lang][key];
+    }
   }
+  menuScheduleBtn.textContent = i18n[lang].menuSchedule;
+  menuInventoryBtn.textContent = i18n[lang].menuInventory;
+  menuManualBtn.textContent = i18n[lang].menuManual;
+  menuInfoBtn.textContent = i18n[lang].menuInfo;
+  document.getElementById('manualContentHy').classList.toggle('is-hidden', lang !== 'HY');
+  document.getElementById('manualContentEn').classList.toggle('is-hidden', lang !== 'EN');
+  const manualQrHintEn = document.getElementById('manualQrHintEn');
+  if (manualQrHintEn) manualQrHintEn.textContent = i18n[lang].manualQrHint;
+  const manualPdfLink = document.getElementById('manualPdfLink');
+  const manualPdfLinkEn = document.getElementById('manualPdfLinkEn');
+  if (manualPdfLink) manualPdfLink.textContent = i18n[lang].manualPdfLink;
+  if (manualPdfLinkEn) manualPdfLinkEn.textContent = i18n[lang].manualPdfLink;
   document.querySelectorAll('.card').forEach(card => {
     const box = card.dataset.box;
     const isEditHidden = card.querySelector('.edit-area').classList.contains('is-hidden');
@@ -493,12 +1022,13 @@ function switchLanguage(lang) {
     rebuildDayPills(card, box);
   });
   buildSidebarSchedule();
+  if (activeSidePanel === 'inventory') buildInventoryList();
 }
 langBtn.onclick = () => switchLanguage(currentLang === 'HY' ? 'EN' : 'HY');
 
-// ─── Info modal ───
-document.getElementById('infoBtn').onclick = () => infoModal.classList.add('active');
 document.getElementById('closeInfo').onclick = () => infoModal.classList.remove('active');
+manualModal.addEventListener('click', (e) => { if (e.target === manualModal) manualModal.classList.remove('active'); });
+infoModal.addEventListener('click', (e) => { if (e.target === infoModal) infoModal.classList.remove('active'); });
 document.getElementById('closeBox').onclick = () => modal.classList.remove('active');
 document.getElementById('addMedBtn').onclick = openModal;
 
@@ -532,10 +1062,11 @@ function rebuildDayPills(card, box) {
   const selectedDayEl = card.querySelector('.selected-day-data');
   const currentSelected = selectedDayEl ? selectedDayEl.dataset.selected : null;
   pillsContainer.innerHTML = '';
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 8; i++) {
     const val = String(i);
-    const dayName = L.days[i];
-    const dayLong = L.daysLong[i];
+    const isEveryDay = i === 7;
+    const dayName = isEveryDay ? L.everyDay : L.days[i];
+    const dayLong = isEveryDay ? L.everyDay : L.daysLong[i];
     const pill = document.createElement('div');
     pill.className = 'day-pill' + ((currentSelected === val || (!currentSelected && i === 0)) ? ' selected' : '');
     pill.dataset.val = val;
@@ -557,7 +1088,7 @@ function rebuildDayPills(card, box) {
 function formatScheduleEntry(value) {
   const [weekdayPart, timePart] = value.split('T');
   const weekday = weekdayPart && weekdayPart[0] === 'W' ? Number(weekdayPart.slice(1)) : -1;
-  const dayName = i18n[currentLang].daysLong[weekday] || weekdayPart;
+  const dayName = weekday === 7 ? i18n[currentLang].everyDay : (i18n[currentLang].daysLong[weekday] || weekdayPart);
   return dayName + ' ' + (timePart || '');
 }
 
@@ -586,7 +1117,7 @@ function createCard(box) {
   const card = document.createElement('div');
   card.className = 'card';
   card.dataset.box = box;
-  allMedsData[box] = { name: '', dates: [] };
+  allMedsData[box] = { name: '', dates: [], count: 0 };
 
   card.innerHTML =
     '<div class="header-row">' +
@@ -681,6 +1212,7 @@ function createCard(box) {
         toggleBtn.className = 'button btn-gray';
         allMedsData[box].name = nIn.value || (i18n[currentLang].medCardTitle + ' ' + box);
         allMedsData[box].dates = [...dateTimes];
+        allMedsData[box].count = Number(cIn.value) || 0;
         if (nIn.value || cIn.value || dateTimes.length > 0) {
           infoV.classList.remove('is-hidden');
           const L2 = i18n[currentLang];
@@ -696,6 +1228,7 @@ function createCard(box) {
           fetch('/medOne', { method:'POST', body: params }).catch(() => {});
         }
         buildSidebarSchedule();
+        buildInventoryList();
       }
     }
 
@@ -727,6 +1260,7 @@ function createCard(box) {
       delete allMedsData[box];
       card.remove();
       buildSidebarSchedule();
+      buildInventoryList();
     }
 
     if (a === 'save') {
@@ -739,6 +1273,7 @@ function createCard(box) {
 
   medList.appendChild(card);
   buildSidebarSchedule();
+  buildInventoryList();
 }
 
 document.getElementById('filledBtn').onclick = () => {
@@ -747,8 +1282,8 @@ document.getElementById('filledBtn').onclick = () => {
     .catch(() => alert(i18n[currentLang].actionConfirmed));
 };
 
-// init sidebar
-buildSidebarSchedule();
+// init: graph open by default
+setActiveSidePanel('schedule');
 refreshAlarmStatus();
 setInterval(refreshAlarmStatus, 1500);
 })();
