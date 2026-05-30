@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="hy">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ՀԻՇԻՐ</title>
+
+<style>
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family: Arial;
+}
+
+body{
+  background:#eef4ff;
+  color:#1e293b;
+}
+
+/* HEADER */
+
+.top{
+  background:linear-gradient(90deg,#0f172a,#1d4ed8);
+  color:white;
+  padding:18px 25px;
+  font-size:26px;
+  font-weight:bold;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  position:relative;
+}
+
+/* INFO BUTTON */
+
+.info-header-btn{
+  background:rgba(255,255,255,0.15);
+  color:white;
+  border:1px solid rgba(255,255,255,0.3);
+  padding:8px 16px;
+  border-radius:10px;
+  font-size:16px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.info-box{
+  display:none;
+  position:absolute;
+  top:100%;
+  right:25px;
+  background:white;
+  color:#1e293b;
+  padding:15px;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.15);
+  border:1px solid #e2e8f0;
+  line-height:1.6;
+  font-size:15px;
+  z-index:100;
+  min-width:280px;
+}
+
+/* CONTAINER */
+
+.container{
+  max-width:1200px;
+  margin:20px auto;
+  padding:15px;
+}
+
+/* CARD */
+
+.card{
+  background:white;
+  border-radius:22px;
+  padding:20px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+}
+
+/* GRID */
+
+.grid{
+  display:flex;
+  gap:20px;
+  flex-wrap:wrap;
+}
+
+/* QR */
+
+.qr{
+  flex:1;
+  min-width:280px;
+  text-align:center;
+  background:#f8fbff;
+  padding:20px;
+  border-radius:18px;
+  border:1px solid #dbeafe;
+}
+
+.qr img{
+  width:100%;
+  max-width:250px;
+  border-radius:15px;
+}
+
+.qr-text{
+  margin-top:10px;
+  font-size:14px;
+}
+
+.info-btn{
+  width:100%;
+  margin-top:12px;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#2563eb;
+  color:white;
+  font-size:18px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* FORM */
+
+.form{
+  flex:1;
+  min-width:280px;
+}
+
+label{
+  font-weight:bold;
+  display:block;
+  margin:10px 0 5px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:1px solid #cbd5e1;
+  outline:none;
+  font-size:15px;
+}
+
+button.save{
+  width:100%;
+  margin-top:15px;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:#0f172a;
+  color:white;
+  font-size:18px;
+  cursor:pointer;
+}
+
+/* MOBILE */
+
+@media(max-width:700px){
+
+  .grid{
+    flex-direction:column;
+  }
+
+  .top{
+    font-size:22px;
+    padding:15px;
+  }
+
+  .info-header-btn{
+    padding:6px 12px;
+    font-size:14px;
+  }
+
+  .info-box{
+    right:15px;
+    left:15px;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="top">
+
+  <div>ՀԻՇԻՐ</div>
+
+  <div style="position:relative;">
+
+    <button class="info-header-btn" onclick="toggleInfo()">
+      ℹ️ Տեղեկություն
+    </button>
+
+    <div class="info-box" id="info">
+
+      <p>🔹 Սկանավորեք կամ սեղմեք հղմանը</p>
+
+      <p><b>Քայլ 1:</b> Telegram բոտի ակտիվացում</p>
+
+      <p><b>Քայլ 2:</b> Դեղերի գրանցում</p>
+
+      <p><b>Քայլ 3:</b> Ծանուցումներ</p>
+
+      <hr style="margin:10px 0; border:0; border-top:1px solid #e2e8f0;">
+
+      <p style="text-align:center;">
+        ❤️ Առողջություն ենք մաղթում
+      </p>
+
+    </div>
+
+  </div>
+
+</div>
+
+<div class="container">
+
+<div class="card">
+
+<div class="grid">
+
+<!-- QR -->
+
+<div class="qr">
+
+<img src="Chat ID Qr.jpg">
+
+<div class="qr-text">
+Սկանավորեք QR-ը և ստացեք Chat ID
+</div>
+
+<a href="https://t.me/userinfobot" target="_blank">
+
+<button class="info-btn">
+🔗 Բացել հղումը
+</button>
+
+</a>
+
+</div>
+
+<!-- FORM -->
+
+<div class="form">
+
+<label>Wi-Fi անուն</label>
+
+<input
+type="text"
+id="ssid"
+placeholder="Գրեք Wi-Fi անունը">
+
+<label>Գաղտնաբառ</label>
+
+<input
+type="password"
+id="pass"
+placeholder="Գրեք գաղտնաբառը">
+
+<label>Chat ID</label>
+
+<input
+type="text"
+id="chatid"
+placeholder="Telegram Chat ID">
+
+<button class="save" onclick="saveData()">
+Պահպանել
+</button>
+
+</div>
+
+</div>
+</div>
+</div>
+<script>
+
+function toggleInfo(){
+
+  const box = document.getElementById("info");
+
+  box.style.display =
+    box.style.display === "block"
+    ? "none"
+    : "block";
+}
+
+document.addEventListener('click', function(event){
+
+  const box = document.getElementById("info");
+
+  const btn = document.querySelector(".info-header-btn");
+
+  if(
+    box.style.display === "block" &&
+    !box.contains(event.target) &&
+    event.target !== btn
+  ){
+    box.style.display = "none";
+  }
+});
+
+async function saveData(){
+
+  const ssid =
+    document.getElementById("ssid").value;
+
+  const pass =
+    document.getElementById("pass").value;
+
+  const chatid =
+    document.getElementById("chatid").value;
+
+  const formData = new FormData();
+
+  formData.append("ssid", ssid);
+  formData.append("pass", pass);
+
+  // ✅ FIX
+  formData.append("chatID", chatid);
+
+  try{
+
+    const response = await fetch("/save",{
+      method:"POST",
+      body:formData
+    });
+
+    const text = await response.text();
+
+    alert(text);
+
+  }catch(err){
+
+    alert("Սխալ");
+  }
+}
+
+window.onload = async () => {
+
+  try{
+
+    const res = await fetch("/getData");
+
+    const data = await res.json();
+
+    document.getElementById("ssid").value =
+      data.ssid || "";
+
+    document.getElementById("pass").value =
+      data.pass || "";
+
+    document.getElementById("chatid").value =
+      data.chatid || "";
+
+  }catch(err){
+
+    console.log("No saved data");
+  }
+};
+
+</script>
+
+</body>
+</html>

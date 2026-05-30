@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>DigiCodeProject</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+  --primary-blue: #3a5072;
+  --purple-accent: #6d557b;
+  --muted-rose: #a86c80;
+  --coral-danger: #db7476;
+  --soft-peach: #f4bb9b;
+  --bg-body: #f4f7f9;
+  --text-main: #2c3e50;
+  --card-shadow: 0 8px 30px rgba(58,80,114,0.08);
+}
+* { box-sizing: border-box; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+body { margin: 0; background: var(--bg-body); color: var(--text-main); opacity: 0; transition: opacity 0.4s ease; font-size: 16px; }
+body.loaded { opacity: 1; }
+
+/* ── NAV ── */
+.topnav { background: var(--primary-blue); color: white; padding: 14px 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 200; }
+.topnav h1 { margin: 0; font-size: 22px; font-weight: 700; }
+.lang-btn { background: rgba(255,255,255,0.2); color: white; border: 2px solid white; padding: 6px 14px; border-radius: 12px; cursor: pointer; font-weight: 800; font-size: 13px; transition: all 0.3s; }
+.lang-btn:hover { background: white; color: var(--primary-blue); }
+
+/* ── MAIN LAYOUT ── */
+.page-layout { display: flex; gap: 0; min-height: calc(100vh - 52px); }
+
+/* ── LEFT: med list ── */
+.left-col { flex: 1; padding: 20px; min-width: 0; }
+
+/* ── RIGHT: schedule sidebar ── */
+.schedule-sidebar {
+  width: 300px;
+  min-width: 300px;
+  background: white;
+  border-left: 2px solid #e8edf3;
+  padding: 0;
+  position: sticky;
+  top: 52px;
+  height: calc(100vh - 52px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar-header {
+  background: var(--primary-blue);
+  color: white;
+  padding: 16px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: sticky;
+  top: 0;
+}
+.sidebar-body { padding: 12px; flex: 1; }
+
+/* Day tabs in sidebar */
+.day-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.day-tab { padding: 6px 10px; border-radius: 10px; border: 1.5px solid #e2e8f0; background: white; color: var(--primary-blue); font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.day-tab.active { background: var(--purple-accent); color: white; border-color: var(--purple-accent); }
+
+.sched-day-section { display: none; }
+.sched-day-section.visible { display: block; }
+
+.sched-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  background: #f8fafc;
+  border-radius: 10px;
+  margin-bottom: 7px;
+  border-left: 3px solid var(--purple-accent);
+}
+.sched-time { font-size: 18px; font-weight: 800; color: var(--primary-blue); min-width: 48px; }
+.sched-info { flex: 1; }
+.sched-name { font-size: 13px; font-weight: 600; color: var(--text-main); }
+.sched-box { font-size: 11px; color: var(--muted-rose); font-weight: 600; }
+.sched-empty { text-align: center; color: #aab; font-size: 13px; padding: 20px 0; }
+
+/* ── CARDS ── */
+.card { background: white; padding: 22px; margin-bottom: 16px; border-radius: 18px; box-shadow: var(--card-shadow); border-left: 5px solid var(--purple-accent); }
+.header-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.med-title { font-size: 18px; color: var(--primary-blue); font-weight: 700; }
+.button { border: none; padding: 11px 20px; border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
+.button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+.button:active { transform: translateY(0); }
+.btn-blue { background: var(--primary-blue); color: white; }
+.btn-purple { background: var(--purple-accent); color: white; }
+.btn-rose-main { background: var(--muted-rose); color: white; width: 100%; padding: 15px; font-size: 17px; margin-top: 18px; }
+.btn-red { background: var(--coral-danger); color: white; }
+.btn-gray { background: #edf2f7; color: var(--primary-blue); }
+.btn-gray:hover { background: #e2e8f0; }
+.is-hidden { display: none !important; }
+input[type="text"], input[type="number"] { width: 100%; padding: 14px; border-radius: 12px; border: 1.5px solid #dde6ef; background: #fcfdfe; margin-top: 8px; font-size: 16px; color: var(--text-main); outline: none; transition: all 0.2s; }
+input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(58,80,114,0.1); background: white; }
+.input-label { font-size: 14px; color: var(--primary-blue); margin-top: 16px; margin-bottom: 4px; font-weight: 700; display: block; }
+.chips { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 7px; }
+.chip { background: #f0f4f8; color: var(--primary-blue); border: 1px solid rgba(58,80,114,0.15); padding: 8px 14px; border-radius: 30px; cursor: pointer; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s; }
+.chip::after { content: '✕'; font-size: 11px; font-weight: bold; color: var(--coral-danger); }
+.chip:hover { background: var(--coral-danger); color: white; border-color: var(--coral-danger); }
+.chip:hover::after { color: white; }
+.hint-arrow { display: flex; align-items: center; gap: 5px; color: var(--muted-rose); font-size: 14px; font-weight: 700; animation: nudge 1.5s infinite; }
+@keyframes nudge { 0%,100% { transform: translateX(0); } 50% { transform: translateX(6px); } }
+
+/* ── FLOATING BUTTONS ── */
+.floating-add { width: 66px; height: 66px; border-radius: 50%; background: var(--soft-peach); color: #5a3d28; border: none; font-size: 32px; font-weight: bold; cursor: pointer; box-shadow: 0 6px 20px rgba(244,188,155,0.6); display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.floating-add:hover { transform: scale(1.1) rotate(90deg); }
+.add-container { position: fixed; right: 24px; bottom: 24px; display: flex; align-items: center; gap: 10px; z-index: 100; }
+.add-hint-text { color: var(--muted-rose); font-size: 15px; font-weight: 700; animation: nudge 1.5s infinite; white-space: nowrap; }
+.info-floating { position: fixed; right: 24px; bottom: 104px; padding: 12px 18px; border: none; border-radius: 14px; background: var(--purple-accent); color: white; font-size: 15px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 14px rgba(109,85,123,0.35); z-index: 99; }
+
+/* ── MODALS ── */
+.modal { position: fixed; inset: 0; background: rgba(44,62,80,0.55); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; padding: 16px; z-index: 1000; }
+.modal.active { display: flex; }
+.modal-box { background: white; padding: 28px; border-radius: 22px; width: 100%; max-width: 480px; box-shadow: 0 15px 40px rgba(0,0,0,0.15); animation: scaleUp 0.25s ease; }
+@keyframes scaleUp { from { transform: scale(0.94); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes shake { 0% { transform: translateX(0); } 25% { transform: translateX(-5px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); } }
+.shake-animation { animation: shake 0.3s ease-in-out; background-color: #a45254 !important; }
+
+/* ── BOX GRID ── */
+.grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+.box-btn { padding: 16px; border-radius: 14px; border: none; color: white; font-size: 20px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.box-btn.available { background: var(--primary-blue); }
+.box-btn.available:hover { background: var(--purple-accent); transform: translateY(-2px); }
+.box-btn.selected { background: #cbd5e1; color: #78889b; cursor: not-allowed; }
+
+/* ── TIME PICKER ── */
+.time-picker-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  margin-top: 8px;
+}
+/* Day selector - scrollable horizontal list */
+.day-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+  margin-top: 8px;
+}
+.day-selector::-webkit-scrollbar { display: none; }
+.day-pill {
+  flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 2px solid #e2e8f0;
+  background: white;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  min-width: 68px;
+}
+.day-pill:hover { border-color: var(--purple-accent); }
+.day-pill.selected { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+.day-pill .dp-name { font-size: 11px; font-weight: 700; text-transform: uppercase; opacity: 0.8; }
+.day-pill .dp-date { font-size: 18px; font-weight: 800; }
+.day-pill .dp-month { font-size: 11px; opacity: 0.75; }
+
+/* Hour picker - drum-roll style */
+.hour-picker-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.drum-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.drum-btn { background: none; border: none; font-size: 20px; cursor: pointer; color: #aab; padding: 4px 8px; line-height: 1; transition: color 0.15s; }
+.drum-btn:hover { color: var(--primary-blue); }
+.drum-val {
+  width: 72px; height: 58px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; font-weight: 800; color: var(--primary-blue);
+  background: #f0f4f8; border-radius: 14px;
+  border: 2px solid #dde6ef;
+  cursor: pointer;
+  user-select: none;
+}
+.drum-sep { font-size: 32px; font-weight: 900; color: var(--primary-blue); margin: 0 2px; line-height: 1; align-self: center; }
+
+.add-time-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  background: var(--primary-blue);
+  color: white;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.add-time-btn:hover { background: var(--purple-accent); transform: translateY(-1px); }
+
+/* Info steps */
+.info-step-title { color: var(--purple-accent); margin-top: 18px; border-left: 5px solid var(--purple-accent); padding-left: 12px; font-weight: 700; font-size: 16px; }
+.tg-link { display: inline-block; margin-top: 10px; color: #0088cc; text-decoration: none; font-weight: bold; font-size: 15px; }
+.tg-link:hover { text-decoration: underline; }
+
+/* bottom action bar */
+.bottom-bar {
+  position: sticky;
+  bottom: 0;
+  background: white;
+  border-top: 1px solid #e8edf3;
+  padding: 12px 16px;
+  display: flex;
+  gap: 10px;
+}
+.bottom-bar .button { flex: 1; padding: 14px; font-size: 16px; }
+
+/* info view inside card */
+.d-name { font-weight: 700; color: var(--primary-blue); font-size: 16px; }
+.d-count { font-weight: 600; color: var(--purple-accent); font-size: 14px; margin-top: 3px; }
+.d-datetimes { color: #556b82; font-size: 14px; margin-top: 5px; font-weight: 500; line-height: 1.6; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 780px) {
+  .schedule-sidebar { display: none; }
+  .schedule-sidebar.mobile-open { display: flex; position: fixed; top: 0; right: 0; bottom: 0; width: 85vw; max-width: 320px; z-index: 500; box-shadow: -6px 0 30px rgba(0,0,0,0.15); }
+  .sidebar-overlay { display: block !important; }
+}
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 499; }
+
+@media (max-width: 600px) {
+  .header-row { flex-direction: column; align-items: flex-start; }
+  .grid { grid-template-columns: repeat(4, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="topnav">
+  <h1 id="navTitle">💊 ՀԻՇԻՐ</h1>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <button class="button btn-gray" id="schedToggleBtn" style="padding:8px 14px;font-size:14px;display:none;">📅</button>
+    <button class="lang-btn" id="langBtn">ՀԱՅ</button>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="page-layout">
+  <!-- LEFT -->
+  <div class="left-col">
+    <div id="medList"></div>
+    <button class="button btn-gray" style="width:100%; margin-top:4px; padding:16px; font-size:17px; font-weight:bold;" id="filledBtn">✅ Լցրեցի բոլորը</button>
+    <div style="height:100px;"></div>
+  </div>
+
+  <!-- RIGHT SIDEBAR: always visible on desktop -->
+  <div class="schedule-sidebar" id="scheduleSidebar">
+    <div class="sidebar-header">📅 <span id="sidebarTitle">Գրաֆիկ</span></div>
+    <div class="sidebar-body">
+      <div class="day-tabs" id="sidebarDayTabs"></div>
+      <div id="sidebarDaySections"></div>
+    </div>
+  </div>
+</div>
+
+<!-- floating buttons -->
+<button class="info-floating" id="infoBtn">ℹ️</button>
+<div class="add-container">
+  <div class="add-hint-text" id="addHint">Ավելացնել տուփ ➜</div>
+  <button class="floating-add" id="addMedBtn">＋</button>
+</div>
+
+<!-- BOX MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-box" style="text-align:center;">
+    <h3 id="modalBoxTitle" style="color:var(--primary-blue);margin:0 0 4px;font-size:20px;">Ընտրիր տուփի համար</h3>
+    <div class="grid" id="boxGrid"></div>
+    <button id="closeBox" class="button btn-red" style="margin-top:22px;width:100%;">✕ Փակել</button>
+  </div>
+</div>
+
+<!-- INFO MODAL -->
+<div class="modal" id="infoModal">
+  <div class="modal-box" style="text-align:left;max-height:88vh;overflow-y:auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #edf2f7;padding-bottom:12px;">
+      <h2 id="infoModalTitle" style="margin:0;color:var(--primary-blue);font-size:20px;">ℹ️ Տեղեկություն</h2>
+      <button id="closeInfo" class="button btn-red" style="padding:7px 13px;">✕</button>
+    </div>
+    <div style="text-align:center;padding:18px 0;background:#f8fafc;border-radius:16px;margin-top:14px;border:1px solid #e2e8f0;">
+      <img src="Bot Qr.jpg" alt="Bot QR" style="width:160px;height:160px;border-radius:10px;box-shadow:0 4px 12px rgba(0,0,0,0.05);">
+      <br>
+      <a href="https://t.me/HishiBot_bot" target="_blank" class="tg-link" id="tgLinkText">🔗 @HishiBot_bot</a>
+      <div id="qrHintText" style="margin-top:7px;font-size:14px;color:var(--primary-blue);font-weight:bold;">Սկանավորեք կամ սեղմեք հղմանը</div>
+    </div>
+    <div style="line-height:1.65;font-size:15px;color:var(--text-main);margin-top:14px;">
+      <div class="info-step-title" id="step1Title">Քայլ 1. Telegram Բոտի ակտիվացում</div>
+      <p id="step1Desc">Սկանավորեք QR կոդը կամ սեղմեք հղմանը, անցեք բոտ և սեղմեք <b>/start</b>։</p>
+      <div class="info-step-title" id="step2Title">Քայլ 2. Դեղերի գրանցում</div>
+      <p id="step2Desc">Ավելացրեք դեղ, ընտրեք տուփ, նշեք ժամ ու օր։</p>
+      <div class="info-step-title" id="step3Title">Քայլ 3. Ծանուցումների ստացում</div>
+      <p id="step4Desc">Ճիշտ ժամին սարքը կթարթի ու ձայն կտա, բոտը հաղորդագրություն կուղարկի։</p>
+      <p id="healthWish" style="text-align:center;font-weight:bold;color:var(--muted-rose);margin-top:20px;font-size:17px;">❤️ Առողջություն ենք մաղթում</p>
+    </div>
+  </div>
+</div>
+
+<script>
+window.addEventListener('load', () => { document.body.classList.add('loaded'); });
+(function () {
+const MAX = 7;
+const medList = document.getElementById('medList');
+const modal = document.getElementById('modal');
+const infoModal = document.getElementById('infoModal');
+const grid = document.getElementById('boxGrid');
+const langBtn = document.getElementById('langBtn');
+const scheduleSidebar = document.getElementById('scheduleSidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const schedToggleBtn = document.getElementById('schedToggleBtn');
+
+let currentLang = 'HY';
+let allMedsData = {};
+let activeSidebarDay = 0;
+
+// Show toggle btn only on mobile
+function checkMobile() {
+  if (window.innerWidth <= 780) { schedToggleBtn.style.display = ''; }
+  else { schedToggleBtn.style.display = 'none'; scheduleSidebar.classList.remove('mobile-open'); sidebarOverlay.style.display = 'none'; }
+}
+window.addEventListener('resize', checkMobile);
+checkMobile();
+
+schedToggleBtn.onclick = () => {
+  scheduleSidebar.classList.toggle('mobile-open');
+  sidebarOverlay.style.display = scheduleSidebar.classList.contains('mobile-open') ? 'block' : 'none';
+};
+sidebarOverlay.onclick = () => {
+  scheduleSidebar.classList.remove('mobile-open');
+  sidebarOverlay.style.display = 'none';
+};
+
+// ─── i18n ───
+const DAYS_HY = ['Կիր','Երկ','Երք','Չոր','Հնգ','Ուրբ','Շաբ'];
+const DAYS_HY_LONG = ['Կիրակի','Երկուշաբ.','Երեքշաբ.','Չորեքշաբ.','Հինգշաբ.','Ուրբաթ','Շաբաթ'];
+const DAYS_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const DAYS_EN_LONG = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const MONTHS_HY = ['Հնվ','Փտր','Մրտ','Ապр','Մյս','Հնս','Հلس','Օգս','Սпт','Հкт','Նyм','Դкт'];
+const MONTHS_HY2 = ['Հնվ','Փտր','Մրտ','Ապ','Մյ','Հն','Հл','Ög','Սт','Հт','Нм','Дк'];
+const MONTHS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+const i18n = {
+  HY: {
+    navTitle:'💊 ՀԻՇԻՐ', filledBtn:'✅ Լցրեցի բոլորը', sidebarTitle:'Գրաֆիկ',
+    infoModalTitle:'ℹ️ Տեղեկություն', tgLinkText:'🔗 @HishiBot_bot',
+    qrHintText:'Սկանավորեք կամ սեղմեք հղմանը',
+    step1Title:'Քայլ 1. Telegram Բոտի ակտիվացում',
+    step1Desc:'Սկանավորեք QR կոդը կամ սեղմեք հղմանը, անցեք բոտ և սեղմեք /start։',
+    step2Title:'Քայլ 2. Դեղերի գրանցում',
+    step2Desc:'Ավելացրեք դեղ, ընտրեք տուփ, նշեք ժամ ու օր։',
+    step3Title:'Քայլ 3. Ծանուցումների ստացում',
+    step4Desc:'Ճիշտ ժամին սարքը կթարթի ու ձայն կտա, բոտը հաղորդագրություն կուղարկի։',
+    healthWish:'❤️ Առողջություն ենք մաղթում', medCardTitle:'Դեղ', boxText:'Տուփ',
+    clickText:'Սեղմիր', editBtn:'Փոփոխել', confirmBtn:'Հաստատել',
+    placeholderName:'Մուտքագրեք դեղի անունը...', countLabel:'🔢 Քանակ այս տուփում',
+    countPlaceholder:'Օրինակ՝ 10', timeLabel:'🕒 Ընտրեք օրն ու ժամը',
+    addTimeBtn:'➕ Ավելացնել ժամ', saveBtn:'💊 Լցնել դեղատուփը',
+    viewName:'Անվ.', viewNoName:'Նշված չէ', viewCount:'Մնաց.',
+    viewCountUnit:'հատ', viewTimes:'📅 Ժամ.:', noSchedule:'Դեղ չկա',
+    confirmDelete:'Ջնջե՞լ։', alertSuccess:'Լցվում է։ Քանակ՝ ',
+    alertError:'Կապի սխալ։', actionConfirmed:'Հաստատվեց։',
+    days: DAYS_HY, daysLong: DAYS_HY_LONG, months: MONTHS_EN
+  },
+  EN: {
+    navTitle:'💊 REMEMBER', filledBtn:'✅ I filled all', sidebarTitle:'Schedule',
+    infoModalTitle:'ℹ️ Information', tgLinkText:'🔗 @HishiBot_bot',
+    qrHintText:'Scan or click the link to join',
+    step1Title:'Step 1. Activate Telegram Bot',
+    step1Desc:'Scan the QR code or click the link, go to the bot and press /start.',
+    step2Title:'Step 2. Register Medicines',
+    step2Desc:'Add medicines, select the slot and set the time and day.',
+    step3Title:'Step 3. Receive Notifications',
+    step4Desc:'At the right time the device will flash and buzz, and the bot will message you.',
+    healthWish:'❤️ Wishing you good health', medCardTitle:'Med', boxText:'Box',
+    clickText:'Click', editBtn:'Edit', confirmBtn:'Confirm',
+    placeholderName:'Enter medicine name...', countLabel:'🔢 Quantity in this box',
+    countPlaceholder:'e.g. 10', timeLabel:'🕒 Choose day & time',
+    addTimeBtn:'➕ Add time', saveBtn:'💊 Fill the Box',
+    viewName:'Name:', viewNoName:'Not specified', viewCount:'Remaining:',
+    viewCountUnit:'pcs', viewTimes:'📅 Times:', noSchedule:'No medicines scheduled.',
+    confirmDelete:'Delete?', alertSuccess:'Filling box. Qty: ',
+    alertError:'Connection error.', actionConfirmed:'Confirmed.',
+    days: DAYS_EN, daysLong: DAYS_EN_LONG, months: MONTHS_EN
+  }
+};
+
+// ─── Sidebar schedule ───
+function buildSidebarSchedule() {
+  const tabsEl = document.getElementById('sidebarDayTabs');
+  const sectionsEl = document.getElementById('sidebarDaySections');
+  tabsEl.innerHTML = '';
+  sectionsEl.innerHTML = '';
+
+  const lang = i18n[currentLang];
+  const today = new Date();
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    days.push({ date: d, dateStr: yyyy+'-'+mm+'-'+dd, items: [] });
+  }
+
+  // collect items
+  for (const box in allMedsData) {
+    const med = allMedsData[box];
+    med.dates.forEach(dt => {
+      const [datePart, timePart] = dt.split('T');
+      const dayObj = days.find(d => d.dateStr === datePart);
+      if (dayObj) dayObj.items.push({ time: timePart, name: med.name || (lang.medCardTitle+' #'+box), box });
+    });
+  }
+
+  days.forEach((day, idx) => {
+    // tab
+    const tab = document.createElement('button');
+    tab.className = 'day-tab' + (idx === activeSidebarDay ? ' active' : '');
+    const dayName = lang.days[day.date.getDay()];
+    const dayNum = day.date.getDate();
+    tab.innerHTML = '<div style="font-size:10px;font-weight:700;opacity:0.8;">'+dayName+'</div><div style="font-size:16px;font-weight:800;">'+dayNum+'</div>';
+    tab.onclick = () => { activeSidebarDay = idx; buildSidebarSchedule(); };
+    tabsEl.appendChild(tab);
+
+    // section
+    const sec = document.createElement('div');
+    sec.className = 'sched-day-section' + (idx === activeSidebarDay ? ' visible' : '');
+
+    if (day.items.length === 0) {
+      const emp = document.createElement('div');
+      emp.className = 'sched-empty';
+      emp.textContent = lang.noSchedule;
+      sec.appendChild(emp);
+    } else {
+      day.items.sort((a,b) => a.time.localeCompare(b.time));
+      day.items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'sched-item';
+        row.innerHTML =
+          '<div class="sched-time">'+item.time+'</div>' +
+          '<div class="sched-info"><div class="sched-name">'+item.name+'</div>' +
+          '<div class="sched-box">'+lang.boxText+' #'+item.box+'</div></div>';
+        sec.appendChild(row);
+      });
+    }
+    sectionsEl.appendChild(sec);
+  });
+}
+
+// ─── Language switch ───
+function switchLanguage(lang) {
+  currentLang = lang;
+  langBtn.textContent = lang === 'HY' ? 'ՀԱՅ' : 'ENG';
+  for (let key in i18n[lang]) {
+    if (typeof i18n[lang][key] !== 'string') continue;
+    const el = document.getElementById(key);
+    if (el) el.innerHTML = i18n[lang][key];
+  }
+  document.querySelectorAll('.card').forEach(card => {
+    const box = card.dataset.box;
+    const isEditHidden = card.querySelector('.edit-area').classList.contains('is-hidden');
+    const L = i18n[lang];
+    card.querySelector('.med-title').innerHTML = '💊 ' + L.medCardTitle + ' | ' + L.boxText + ' #' + box;
+    const hint = card.querySelector('.hint-arrow');
+    if (hint) hint.textContent = L.clickText + ' ➜';
+    const toggleBtn = card.querySelector('[data-action="toggleEdit"]');
+    if (toggleBtn) toggleBtn.textContent = isEditHidden ? L.editBtn : L.confirmBtn;
+    card.querySelector('.name-in').placeholder = L.placeholderName;
+    card.querySelectorAll('.input-label')[0].textContent = L.countLabel;
+    card.querySelector('.count-in').placeholder = L.countPlaceholder;
+    card.querySelectorAll('.input-label')[1].textContent = L.timeLabel;
+    card.querySelector('.add-time-btn').textContent = L.addTimeBtn;
+    card.querySelector('[data-action="save"]').textContent = L.saveBtn;
+    // rebuild day pills
+    rebuildDayPills(card, box);
+  });
+  buildSidebarSchedule();
+}
+langBtn.onclick = () => switchLanguage(currentLang === 'HY' ? 'EN' : 'HY');
+
+// ─── Info modal ───
+document.getElementById('infoBtn').onclick = () => infoModal.classList.add('active');
+document.getElementById('closeInfo').onclick = () => infoModal.classList.remove('active');
+document.getElementById('closeBox').onclick = () => modal.classList.remove('active');
+document.getElementById('addMedBtn').onclick = openModal;
+
+// ─── Box modal ───
+function openModal() {
+  grid.innerHTML = '';
+  const used = [...document.querySelectorAll('.card')].map(c => Number(c.dataset.box));
+  for (let i = 1; i <= MAX; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = i;
+    const isUsed = used.includes(i);
+    btn.className = 'box-btn ' + (isUsed ? 'selected' : 'available');
+    btn.onclick = (e) => {
+      if (isUsed) {
+        e.target.classList.add('shake-animation');
+        setTimeout(() => e.target.classList.remove('shake-animation'), 300);
+      } else {
+        modal.classList.remove('active');
+        createCard(i);
+      }
+    };
+    grid.appendChild(btn);
+  }
+  modal.classList.add('active');
+}
+
+// ─── Day pills builder ───
+function rebuildDayPills(card, box) {
+  const L = i18n[currentLang];
+  const pillsContainer = card.querySelector('.day-selector');
+  const selectedDayEl = card.querySelector('.selected-day-data');
+  const today = new Date();
+  const currentSelected = selectedDayEl ? selectedDayEl.dataset.selected : null;
+  pillsContainer.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    const val = yyyy + '-' + mm + '-' + dd;
+    const dayName = L.days[d.getDay()];
+    const dayNum = d.getDate();
+    const monthName = L.months[d.getMonth()];
+    const pill = document.createElement('div');
+    pill.className = 'day-pill' + ((currentSelected === val || (!currentSelected && i === 0)) ? ' selected' : '');
+    pill.dataset.val = val;
+    pill.innerHTML = '<div class="dp-name">'+dayName+'</div><div class="dp-date">'+dayNum+'</div><div class="dp-month">'+monthName+'</div>';
+    pill.onclick = () => {
+      pillsContainer.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
+      pill.classList.add('selected');
+      if (selectedDayEl) selectedDayEl.dataset.selected = val;
+    };
+    pillsContainer.appendChild(pill);
+  }
+  // auto select first
+  if (!currentSelected) {
+    const firstPill = pillsContainer.querySelector('.day-pill');
+    if (firstPill && selectedDayEl) selectedDayEl.dataset.selected = firstPill.dataset.val;
+  }
+}
+
+// ─── Create card ───
+function createCard(box) {
+  const L = i18n[currentLang];
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.box = box;
+  allMedsData[box] = { name: '', dates: [] };
+
+  card.innerHTML =
+    '<div class="header-row">' +
+      '<div class="med-title">💊 '+L.medCardTitle+' | '+L.boxText+' #'+box+'</div>' +
+      '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">' +
+        '<div class="hint-arrow">'+L.clickText+' ➜</div>' +
+        '<button class="button btn-gray" data-action="toggleEdit">'+L.editBtn+'</button>' +
+        '<button class="button btn-red" style="padding:10px 14px;" data-action="delete">🗑</button>' +
+      '</div>' +
+    '</div>' +
+    '<div class="edit-area is-hidden" style="margin-top:14px;border-top:1px dashed #e2e8f0;padding-top:14px;">' +
+      '<input type="text" placeholder="'+L.placeholderName+'" class="name-in">' +
+      '<span class="input-label">'+L.countLabel+'</span>' +
+      '<input type="number" class="count-in" placeholder="'+L.countPlaceholder+'" min="1">' +
+      '<span class="input-label">'+L.timeLabel+'</span>' +
+      // hidden data store
+      '<div class="selected-day-data" data-selected="" style="display:none;"></div>' +
+      // Day pills
+      '<div class="day-selector"></div>' +
+      // Hour drum
+      '<div class="hour-picker-wrap">' +
+        '<div class="drum-col">' +
+          '<button class="drum-btn" data-drum="h" data-dir="1">▲</button>' +
+          '<div class="drum-val" id="drumH_'+box+'">08</div>' +
+          '<button class="drum-btn" data-drum="h" data-dir="-1">▼</button>' +
+        '</div>' +
+        '<div class="drum-sep">:</div>' +
+        '<div class="drum-col">' +
+          '<button class="drum-btn" data-drum="m" data-dir="1">▲</button>' +
+          '<div class="drum-val" id="drumM_'+box+'">00</div>' +
+          '<button class="drum-btn" data-drum="m" data-dir="-1">▼</button>' +
+        '</div>' +
+      '</div>' +
+      '<button class="add-time-btn" data-action="addDateTime">'+L.addTimeBtn+'</button>' +
+      '<div class="chips"></div>' +
+      '<button class="button btn-rose-main" data-action="save">'+L.saveBtn+'</button>' +
+    '</div>' +
+    '<div class="info-view is-hidden" style="margin-top:12px;border-top:1px solid #edf2f7;padding-top:12px;">' +
+      '<div class="d-name"></div>' +
+      '<div class="d-count"></div>' +
+      '<div class="d-datetimes"></div>' +
+    '</div>';
+
+  const edit = card.querySelector('.edit-area');
+  const infoV = card.querySelector('.info-view');
+  const hint = card.querySelector('.hint-arrow');
+  const toggleBtn = card.querySelector('[data-action="toggleEdit"]');
+  const nIn = card.querySelector('.name-in');
+  const cIn = card.querySelector('.count-in');
+  const chips = card.querySelector('.chips');
+  const drumH = card.querySelector('#drumH_'+box);
+  const drumM = card.querySelector('#drumM_'+box);
+  const selectedDayEl = card.querySelector('.selected-day-data');
+
+  let hVal = 8, mVal = 0;
+  let dateTimes = [];
+
+  // build day pills
+  rebuildDayPills(card, box);
+
+  // drum interaction
+  card.addEventListener('click', (e) => {
+    const drumBtn = e.target.closest('.drum-btn');
+    if (drumBtn) {
+      const type = drumBtn.dataset.drum;
+      const dir = parseInt(drumBtn.dataset.dir);
+      if (type === 'h') { hVal = (hVal + dir + 24) % 24; drumH.textContent = String(hVal).padStart(2,'0'); }
+      if (type === 'm') {  mVal = (mVal + dir + 60) % 60; drumM.textContent = String(mVal).padStart(2,'0'); }
+      return;
+    }
+    // drum val click (spin)
+    const drumVal = e.target.closest('.drum-val');
+    if (drumVal) {
+      if (drumVal === drumH) { hVal = (hVal + 1) % 24; drumH.textContent = String(hVal).padStart(2,'0'); }
+      if (drumVal === drumM) { mVal = (mVal + 1) % 60; drumM.textContent = String(mVal).padStart(2,'0'); }
+      return;
+    }
+
+    const act = e.target.closest('[data-action]');
+    if (!act) return;
+    const a = act.dataset.action;
+
+    if (a === 'toggleEdit') {
+      if (hint) hint.remove();
+      const hide = edit.classList.toggle('is-hidden');
+      if (!hide) {
+        toggleBtn.textContent = i18n[currentLang].confirmBtn;
+        toggleBtn.className = 'button btn-purple';
+        infoV.classList.add('is-hidden');
+      } else {
+        toggleBtn.textContent = i18n[currentLang].editBtn;
+        toggleBtn.className = 'button btn-gray';
+        allMedsData[box].name = nIn.value || (i18n[currentLang].medCardTitle + ' ' + box);
+        allMedsData[box].dates = [...dateTimes];
+        if (nIn.value || cIn.value || dateTimes.length > 0) {
+          infoV.classList.remove('is-hidden');
+          const L2 = i18n[currentLang];
+          card.querySelector('.d-name').textContent = L2.viewName + ' ' + (nIn.value || L2.viewNoName);
+          card.querySelector('.d-count').textContent = '🔢 ' + L2.viewCount + ' ' + (cIn.value || '0') + ' ' + L2.viewCountUnit;
+          card.querySelector('.d-datetimes').innerHTML = L2.viewTimes + '<br>' +
+            (dateTimes.length > 0 ? dateTimes.map(dt => dt.replace('T',' ')).join('<br>') : L2.viewNoName);
+          const params = new URLSearchParams();
+          params.set('medIndex', box);
+          params.set('medName_1', nIn.value);
+          params.set('times_1', dateTimes.join(','));
+          params.set('count_1', cIn.value);
+          fetch('/medOne', { method:'POST', body: params }).catch(() => {});
+        }
+        buildSidebarSchedule();
+      }
+    }
+
+    if (a === 'addDateTime') {
+      const selectedDay = selectedDayEl.dataset.selected;
+      if (!selectedDay) return;
+      const timeStr = String(hVal).padStart(2,'0') + ':' + String(mVal).padStart(2,'0');
+      const fullDT = selectedDay + 'T' + timeStr;
+      if (!dateTimes.includes(fullDT)) {
+        dateTimes.push(fullDT);
+        allMedsData[box].dates = [...dateTimes];
+        const displayVal = i18n[currentLang].days[new Date(selectedDay + 'T12:00:00').getDay()] + ' ' + new Date(selectedDay + 'T12:00:00').getDate() + ' ' + timeStr;
+        const c = document.createElement('button');
+        c.className = 'chip';
+        c.textContent = displayVal + ' ';
+        c.dataset.full = fullDT;
+        c.onclick = () => {
+          dateTimes = dateTimes.filter(x => x !== c.dataset.full);
+          allMedsData[box].dates = [...dateTimes];
+          c.remove();
+          buildSidebarSchedule();
+        };
+        chips.appendChild(c);
+        buildSidebarSchedule();
+      }
+    }
+
+    if (a === 'delete' && confirm(i18n[currentLang].confirmDelete)) {
+      delete allMedsData[box];
+      card.remove();
+      buildSidebarSchedule();
+    }
+
+    if (a === 'save') {
+      const countVal = cIn.value || 0;
+      fetch('/fill?box=' + box + '&count=' + countVal)
+        .then(() => alert(i18n[currentLang].alertSuccess + countVal))
+        .catch(() => alert(i18n[currentLang].alertError));
+    }
+  });
+
+  medList.appendChild(card);
+  buildSidebarSchedule();
+}
+
+document.getElementById('filledBtn').onclick = () => {
+  fetch('/filled', { method:'POST' })
+    .then(() => alert(i18n[currentLang].actionConfirmed))
+    .catch(() => alert(i18n[currentLang].actionConfirmed));
+};
+
+// init sidebar
+buildSidebarSchedule();
+})();
+</script>
+</body>
+</html>
