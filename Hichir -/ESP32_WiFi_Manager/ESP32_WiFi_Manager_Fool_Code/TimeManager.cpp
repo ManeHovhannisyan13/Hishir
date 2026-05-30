@@ -1,16 +1,13 @@
 #include "TimeManager.h"
 
-// ՈՒՂՂՎԱԾ ԿՈՆՍՏՐՈՒԿՏՈՐ (ընդունում է բոլոր 9 արգումենտները)
+// Կոնստրուկտորը պահում է դեղերի ժամանակացույցի զանգվածների հղումները։
 TimeManager::TimeManager(
     int* medTimeCount,
-    int medYears[][12], int medMonths[][12], int medDays[][12],
-    int medHours[][12], int medMinutes[][12],
+    int medWeekdays[][12], int medHours[][12], int medMinutes[][12],
     String* medNames, String* medTimes, int* medCount
 ) {
   medTimeCountPtr = medTimeCount;
-  medYearsPtr = medYears;
-  medMonthsPtr = medMonths;
-  medDaysPtr = medDays;
+  medWeekdaysPtr = medWeekdays;
   medHoursPtr = medHours;
   medMinutesPtr = medMinutes;
   medNamesPtr = medNames;
@@ -24,39 +21,31 @@ String TimeManager::formatTimeHHMM(const struct tm& ti) {
   return String(buf);
 }
 
-// Ֆունկցիա, որը մշակում է "YYYY-MM-DDTHH:MM" ֆորմատը
-bool TimeManager::parseDateTimeISO(
+// Ֆունկցիա, որը մշակում է "W0T08:00" ... "W6T23:59" ֆորմատը
+bool TimeManager::parseWeekdayTime(
   const String& s,
-  int& outY, int& outMon, int& outD, int& outH, int& outM
+  int& outWeekday, int& outH, int& outM
 ) {
   int tIndex = s.indexOf('T');
   if (tIndex == -1) return false;
 
-  String datePart = s.substring(0, tIndex); 
+  String weekdayPart = s.substring(0, tIndex);
   String timePart = s.substring(tIndex + 1); 
 
-  int dash1 = datePart.indexOf('-');
-  int dash2 = datePart.indexOf('-', dash1 + 1);
-  if (dash1 == -1 || dash2 == -1) return false;
+  if (weekdayPart.length() < 2 || weekdayPart.charAt(0) != 'W') return false;
 
   int colon = timePart.indexOf(':');
   if (colon == -1) return false;
 
-  int year = datePart.substring(0, dash1).toInt();
-  int month = datePart.substring(dash1 + 1, dash2).toInt();
-  int day = datePart.substring(dash2 + 1).toInt();
-
+  int weekday = weekdayPart.substring(1).toInt();
   int hour = timePart.substring(0, colon).toInt();
   int min = timePart.substring(colon + 1).toInt();
 
-  if (year < 2020 || month < 1 || month > 12 || day < 1 || day > 31 ||
-      hour < 0 || hour > 23 || min < 0 || min > 59) {
+  if (weekday < 0 || weekday > 6 || hour < 0 || hour > 23 || min < 0 || min > 59) {
     return false;
   }
 
-  outY = year;
-  outMon = month;
-  outD = day;
+  outWeekday = weekday;
   outH = hour;
   outM = min;
 
@@ -73,13 +62,10 @@ int TimeManager::splitAndStoreTimes(const String& csv, int medIdx) {
     part.trim();
 
     if (part.length() > 0) {
-      int y = 0, mon = 0, d = 0, h = 0, m = 0;
+      int weekday = -1, h = 0, m = 0;
 
-      // Կանչում ենք նոր ֆունկցիան
-      if (parseDateTimeISO(part, y, mon, d, h, m)) {
-        medYearsPtr[medIdx][count] = y;
-        medMonthsPtr[medIdx][count] = mon;
-        medDaysPtr[medIdx][count] = d;
+      if (parseWeekdayTime(part, weekday, h, m)) {
+        medWeekdaysPtr[medIdx][count] = weekday;
         medHoursPtr[medIdx][count] = h;
         medMinutesPtr[medIdx][count] = m;
         count++;
@@ -103,9 +89,7 @@ bool TimeManager::updateSingleMedicine(int medIdx, const String& name, const Str
   medTimeCountPtr[medIdx] = 0;
 
   for (int t = 0; t < MAX_TIMES_PER_MED; t++) {
-    medYearsPtr[medIdx][t] = -1;
-    medMonthsPtr[medIdx][t] = -1;
-    medDaysPtr[medIdx][t] = -1;
+    medWeekdaysPtr[medIdx][t] = -1;
     medHoursPtr[medIdx][t] = -1;
     medMinutesPtr[medIdx][t] = -1;
   }

@@ -85,8 +85,17 @@ body.loaded { opacity: 1; }
 
 /* ── CARDS ── */
 .card { background: white; padding: 22px; margin-bottom: 16px; border-radius: 18px; box-shadow: var(--card-shadow); border-left: 5px solid var(--purple-accent); }
+.card.alarm-active { border-left-color: #22c55e; box-shadow: 0 8px 30px rgba(34,197,94,0.22); }
 .header-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 .med-title { font-size: 18px; color: var(--primary-blue); font-weight: 700; }
+.title-wrap { display: flex; align-items: center; gap: 10px; }
+.alarm-dot { display: none; width: 14px; height: 14px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 rgba(34,197,94,0.7); }
+.alarm-dot.active { display: inline-block; animation: alarmPulse 1s infinite; }
+@keyframes alarmPulse {
+  0% { box-shadow: 0 0 0 0 rgba(34,197,94,0.75); transform: scale(1); }
+  70% { box-shadow: 0 0 0 10px rgba(34,197,94,0); transform: scale(1.12); }
+  100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); transform: scale(1); }
+}
 .button { border: none; padding: 11px 20px; border-radius: 12px; cursor: pointer; transition: all 0.2s; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 5px; }
 .button:hover { transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
 .button:active { transform: translateY(0); }
@@ -367,10 +376,10 @@ const i18n = {
     healthWish:'❤️ Առողջություն ենք մաղթում', medCardTitle:'Դեղ', boxText:'Տուփ',
     clickText:'Սեղմիր', editBtn:'Փոփոխել', confirmBtn:'Հաստատել',
     placeholderName:'Մուտքագրեք դեղի անունը...', countLabel:'🔢 Քանակ այս տուփում',
-    countPlaceholder:'Օրինակ՝ 10', timeLabel:'🕒 Ընտրեք օրն ու ժամը',
+    countPlaceholder:'Օրինակ՝ 10', timeLabel:'🕒 Ընտրեք շաբաթվա օրն ու ժամը',
     addTimeBtn:'➕ Ավելացնել ժամ', saveBtn:'💊 Լցնել դեղատուփը',
     viewName:'Անվ.', viewNoName:'Նշված չէ', viewCount:'Մնաց.',
-    viewCountUnit:'հատ', viewTimes:'📅 Ժամ.:', noSchedule:'Դեղ չկա',
+    viewCountUnit:'հատ', viewTimes:'📅 Օր/ժամ:', noSchedule:'Դեղ չկա',
     confirmDelete:'Ջնջե՞լ։', alertSuccess:'Լցվում է։ Քանակ՝ ',
     alertError:'Կապի սխալ։', actionConfirmed:'Հաստատվեց։',
     days: DAYS_HY, daysLong: DAYS_HY_LONG, months: MONTHS_EN
@@ -388,10 +397,10 @@ const i18n = {
     healthWish:'❤️ Wishing you good health', medCardTitle:'Med', boxText:'Box',
     clickText:'Click', editBtn:'Edit', confirmBtn:'Confirm',
     placeholderName:'Enter medicine name...', countLabel:'🔢 Quantity in this box',
-    countPlaceholder:'e.g. 10', timeLabel:'🕒 Choose day & time',
+    countPlaceholder:'e.g. 10', timeLabel:'🕒 Choose weekday & time',
     addTimeBtn:'➕ Add time', saveBtn:'💊 Fill the Box',
     viewName:'Name:', viewNoName:'Not specified', viewCount:'Remaining:',
-    viewCountUnit:'pcs', viewTimes:'📅 Times:', noSchedule:'No medicines scheduled.',
+    viewCountUnit:'pcs', viewTimes:'📅 Weekday/time:', noSchedule:'No medicines scheduled.',
     confirmDelete:'Delete?', alertSuccess:'Filling box. Qty: ',
     alertError:'Connection error.', actionConfirmed:'Confirmed.',
     days: DAYS_EN, daysLong: DAYS_EN_LONG, months: MONTHS_EN
@@ -406,23 +415,18 @@ function buildSidebarSchedule() {
   sectionsEl.innerHTML = '';
 
   const lang = i18n[currentLang];
-  const today = new Date();
   const days = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    days.push({ date: d, dateStr: yyyy+'-'+mm+'-'+dd, items: [] });
+    days.push({ weekday: i, items: [] });
   }
 
   // collect items
   for (const box in allMedsData) {
     const med = allMedsData[box];
     med.dates.forEach(dt => {
-      const [datePart, timePart] = dt.split('T');
-      const dayObj = days.find(d => d.dateStr === datePart);
+      const [weekdayPart, timePart] = dt.split('T');
+      const weekday = weekdayPart && weekdayPart[0] === 'W' ? Number(weekdayPart.slice(1)) : -1;
+      const dayObj = days.find(d => d.weekday === weekday);
       if (dayObj) dayObj.items.push({ time: timePart, name: med.name || (lang.medCardTitle+' #'+box), box });
     });
   }
@@ -431,9 +435,8 @@ function buildSidebarSchedule() {
     // tab
     const tab = document.createElement('button');
     tab.className = 'day-tab' + (idx === activeSidebarDay ? ' active' : '');
-    const dayName = lang.days[day.date.getDay()];
-    const dayNum = day.date.getDate();
-    tab.innerHTML = '<div style="font-size:10px;font-weight:700;opacity:0.8;">'+dayName+'</div><div style="font-size:16px;font-weight:800;">'+dayNum+'</div>';
+    const dayName = lang.days[day.weekday];
+    tab.innerHTML = '<div style="font-size:12px;font-weight:800;">'+dayName+'</div>';
     tab.onclick = () => { activeSidebarDay = idx; buildSidebarSchedule(); };
     tabsEl.appendChild(tab);
 
@@ -527,23 +530,16 @@ function rebuildDayPills(card, box) {
   const L = i18n[currentLang];
   const pillsContainer = card.querySelector('.day-selector');
   const selectedDayEl = card.querySelector('.selected-day-data');
-  const today = new Date();
   const currentSelected = selectedDayEl ? selectedDayEl.dataset.selected : null;
   pillsContainer.innerHTML = '';
   for (let i = 0; i < 7; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    const val = yyyy + '-' + mm + '-' + dd;
-    const dayName = L.days[d.getDay()];
-    const dayNum = d.getDate();
-    const monthName = L.months[d.getMonth()];
+    const val = String(i);
+    const dayName = L.days[i];
+    const dayLong = L.daysLong[i];
     const pill = document.createElement('div');
     pill.className = 'day-pill' + ((currentSelected === val || (!currentSelected && i === 0)) ? ' selected' : '');
     pill.dataset.val = val;
-    pill.innerHTML = '<div class="dp-name">'+dayName+'</div><div class="dp-date">'+dayNum+'</div><div class="dp-month">'+monthName+'</div>';
+    pill.innerHTML = '<div class="dp-name">'+dayLong+'</div><div class="dp-date">'+dayName+'</div>';
     pill.onclick = () => {
       pillsContainer.querySelectorAll('.day-pill').forEach(p => p.classList.remove('selected'));
       pill.classList.add('selected');
@@ -558,6 +554,32 @@ function rebuildDayPills(card, box) {
   }
 }
 
+function formatScheduleEntry(value) {
+  const [weekdayPart, timePart] = value.split('T');
+  const weekday = weekdayPart && weekdayPart[0] === 'W' ? Number(weekdayPart.slice(1)) : -1;
+  const dayName = i18n[currentLang].daysLong[weekday] || weekdayPart;
+  return dayName + ' ' + (timePart || '');
+}
+
+function setActiveAlarmCard(medIndex) {
+  document.querySelectorAll('.card').forEach(card => {
+    const isActive = medIndex > 0 && Number(card.dataset.box) === medIndex;
+    card.classList.toggle('alarm-active', isActive);
+    card.querySelectorAll('.alarm-dot').forEach(dot => dot.classList.toggle('active', isActive));
+  });
+}
+
+async function refreshAlarmStatus() {
+  try {
+    const response = await fetch('/alarmStatus', { cache: 'no-store' });
+    if (!response.ok) return;
+    const data = await response.json();
+    setActiveAlarmCard(data.active ? Number(data.medIndex) : -1);
+  } catch (err) {
+    setActiveAlarmCard(-1);
+  }
+}
+
 // ─── Create card ───
 function createCard(box) {
   const L = i18n[currentLang];
@@ -568,7 +590,7 @@ function createCard(box) {
 
   card.innerHTML =
     '<div class="header-row">' +
-      '<div class="med-title">💊 '+L.medCardTitle+' | '+L.boxText+' #'+box+'</div>' +
+      '<div class="title-wrap"><div class="med-title">💊 '+L.medCardTitle+' | '+L.boxText+' #'+box+'</div><span class="alarm-dot" title="Reminder active"></span></div>' +
       '<div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;">' +
         '<div class="hint-arrow">'+L.clickText+' ➜</div>' +
         '<button class="button btn-gray" data-action="toggleEdit">'+L.editBtn+'</button>' +
@@ -603,7 +625,7 @@ function createCard(box) {
       '<button class="button btn-rose-main" data-action="save">'+L.saveBtn+'</button>' +
     '</div>' +
     '<div class="info-view is-hidden" style="margin-top:12px;border-top:1px solid #edf2f7;padding-top:12px;">' +
-      '<div class="d-name"></div>' +
+      '<div style="display:flex;align-items:center;gap:8px;"><div class="d-name"></div><span class="alarm-dot" title="Reminder active"></span></div>' +
       '<div class="d-count"></div>' +
       '<div class="d-datetimes"></div>' +
     '</div>';
@@ -665,7 +687,7 @@ function createCard(box) {
           card.querySelector('.d-name').textContent = L2.viewName + ' ' + (nIn.value || L2.viewNoName);
           card.querySelector('.d-count').textContent = '🔢 ' + L2.viewCount + ' ' + (cIn.value || '0') + ' ' + L2.viewCountUnit;
           card.querySelector('.d-datetimes').innerHTML = L2.viewTimes + '<br>' +
-            (dateTimes.length > 0 ? dateTimes.map(dt => dt.replace('T',' ')).join('<br>') : L2.viewNoName);
+            (dateTimes.length > 0 ? dateTimes.map(formatScheduleEntry).join('<br>') : L2.viewNoName);
           const params = new URLSearchParams();
           params.set('medIndex', box);
           params.set('medName_1', nIn.value);
@@ -681,11 +703,11 @@ function createCard(box) {
       const selectedDay = selectedDayEl.dataset.selected;
       if (!selectedDay) return;
       const timeStr = String(hVal).padStart(2,'0') + ':' + String(mVal).padStart(2,'0');
-      const fullDT = selectedDay + 'T' + timeStr;
+      const fullDT = 'W' + selectedDay + 'T' + timeStr;
       if (!dateTimes.includes(fullDT)) {
         dateTimes.push(fullDT);
         allMedsData[box].dates = [...dateTimes];
-        const displayVal = i18n[currentLang].days[new Date(selectedDay + 'T12:00:00').getDay()] + ' ' + new Date(selectedDay + 'T12:00:00').getDate() + ' ' + timeStr;
+        const displayVal = formatScheduleEntry(fullDT);
         const c = document.createElement('button');
         c.className = 'chip';
         c.textContent = displayVal + ' ';
@@ -727,6 +749,8 @@ document.getElementById('filledBtn').onclick = () => {
 
 // init sidebar
 buildSidebarSchedule();
+refreshAlarmStatus();
+setInterval(refreshAlarmStatus, 1500);
 })();
 </script>
 </body>

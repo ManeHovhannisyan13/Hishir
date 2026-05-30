@@ -9,10 +9,8 @@ public:
     static const int MAX_MEDS = 7;
     static const int MAX_TIMES_PER_MED = 12;
 
-    // Կոնստրուկտորում ավելացնում ենք նոր զանգվածների հղումները (pointers)
     TimeManager(int* medTimeCount, 
-                int medYears[][12], int medMonths[][12], int medDays[][12],
-                int medHours[][12], int medMinutes[][12], 
+                int medWeekdays[][12], int medHours[][12], int medMinutes[][12], 
                 String* medNames, String* medTimes, int* medCount);
 
     int splitAndStoreTimes(const String& csv, int medIdx);
@@ -20,14 +18,12 @@ public:
     bool syncTimeIfNeeded();
     String formatTimeHHMM(const struct tm& ti);
     
-    // Ֆունկցիա ISO DateTime (YYYY-MM-DDTHH:MM) ֆորմատը կարդալու համար
-    bool parseDateTimeISO(const String& s, int& outY, int& outMon, int& outD, int& outH, int& outM);
+    // Կարդում է կրկնվող շաբաթվա օր + ժամ ֆորմատը՝ W0T08:00 ... W6T23:59։
+    bool parseWeekdayTime(const String& s, int& outWeekday, int& outH, int& outM);
 
 private:
     int* medTimeCountPtr;
-    int (*medYearsPtr)[12];
-    int (*medMonthsPtr)[12];
-    int (*medDaysPtr)[12];
+    int (*medWeekdaysPtr)[12];
     int (*medHoursPtr)[12];
     int (*medMinutesPtr)[12];
     String* medNamesPtr;

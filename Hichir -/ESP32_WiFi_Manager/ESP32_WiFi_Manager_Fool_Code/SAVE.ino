@@ -20,9 +20,7 @@ void saveMedicines() {
     for(int t = 0; t < medTimeCount[i]; t++){
 
       String line =
-        String(medYears[i][t]) + "," +
-        String(medMonths[i][t]) + "," +
-        String(medDays[i][t]) + "," +
+        String(medWeekdays[i][t]) + "," +
         String(medHours[i][t]) + "," +
         String(medMinutes[i][t]);
 
@@ -64,7 +62,7 @@ void loadMedicines() {
 
       String line = file.readStringUntil('\n');
 
-      int values[5];
+      int values[5] = {0, 0, 0, 0, 0};
       int index = 0;
 
       while(line.length() > 0 && index < 5){
@@ -81,11 +79,15 @@ void loadMedicines() {
         line = line.substring(comma + 1);
       }
 
-      medYears[i][t] = values[0];
-      medMonths[i][t] = values[1];
-      medDays[i][t] = values[2];
-      medHours[i][t] = values[3];
-      medMinutes[i][t] = values[4];
+      if (index == 3) {
+        medWeekdays[i][t] = values[0];
+        medHours[i][t] = values[1];
+        medMinutes[i][t] = values[2];
+      } else if (index >= 5) {
+        medWeekdays[i][t] = -1;
+        medHours[i][t] = values[3];
+        medMinutes[i][t] = values[4];
+      }
     }
   }
 

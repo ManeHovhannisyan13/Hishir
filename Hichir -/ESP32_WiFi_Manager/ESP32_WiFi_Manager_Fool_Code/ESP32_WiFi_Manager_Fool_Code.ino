@@ -242,9 +242,7 @@ String medNames[MAX_MEDS];
 String medTimes[MAX_MEDS];
 int medTimeCount[MAX_MEDS];
 
-int medYears[MAX_MEDS][MAX_TIMES_PER_MED];
-int medMonths[MAX_MEDS][MAX_TIMES_PER_MED];
-int medDays[MAX_MEDS][MAX_TIMES_PER_MED];
+int medWeekdays[MAX_MEDS][MAX_TIMES_PER_MED];
 int medHours[MAX_MEDS][MAX_TIMES_PER_MED];
 int medMinutes[MAX_MEDS][MAX_TIMES_PER_MED];
 
@@ -252,8 +250,7 @@ int medCounts[MAX_MEDS] = {0, 0, 0, 0, 0, 0, 0};
 
 TimeManager timeManager(
   medTimeCount,
-  medYears, medMonths, medDays,
-  medHours, medMinutes,
+  medWeekdays, medHours, medMinutes,
   medNames,
   medTimes,
   &medCount
@@ -264,8 +261,7 @@ bool alarmSilencedByButton = false;
 unsigned long alarmStopAtMs = 0;
 
 int lastAlarmYear = -1;
-int lastAlarmMonth = -1;
-int lastAlarmDay = -1;
+int lastAlarmYearDay = -1;
 int lastAlarmHour = -1;
 int lastAlarmMinute = -1;
 
@@ -361,6 +357,14 @@ String urlEncode(String str) {
     return encodedString;
 }
 
+String jsonEscape(String value) {
+  value.replace("\\", "\\\\");
+  value.replace("\"", "\\\"");
+  value.replace("\n", "\\n");
+  value.replace("\r", "\\r");
+  return value;
+}
+
 void sendTelegramMessage(String message) {
   if (WiFi.status() != WL_CONNECTED || chatID == "") return;
   
@@ -382,12 +386,11 @@ void sendTelegramMessage(String message) {
   http.end();
 }
 
-static bool shouldBuzzNow(int yNow, int monNow, int dNow, int hNow, int mNow) {
+static bool shouldBuzzNow(int weekdayNow, int hNow, int mNow) {
   if (medCount <= 0) return false;
   for (int i = 0; i < medCount; i++) {
     for (int t = 0; t < medTimeCount[i]; t++) {
-      if (medYears[i][t] == yNow && medMonths[i][t] == monNow && 
-          medDays[i][t] == dNow && medHours[i][t] == hNow && 
+      if (medWeekdays[i][t] == weekdayNow && medHours[i][t] == hNow &&
           medMinutes[i][t] == mNow) {
         return true;
       }
@@ -396,11 +399,10 @@ static bool shouldBuzzNow(int yNow, int monNow, int dNow, int hNow, int mNow) {
   return false;
 }
 
-static int findMatchingMedIndex(int yNow, int monNow, int dNow, int hNow, int mNow) {
+static int findMatchingMedIndex(int weekdayNow, int hNow, int mNow) {
   for (int i = 0; i < medCount; i++) {
     for (int t = 0; t < medTimeCount[i]; t++) {
-      if (medYears[i][t] == yNow && medMonths[i][t] == monNow && 
-          medDays[i][t] == dNow && medHours[i][t] == hNow && 
+      if (medWeekdays[i][t] == weekdayNow && medHours[i][t] == hNow &&
           medMinutes[i][t] == mNow) return i;
     }
   }
@@ -505,6 +507,24 @@ void setup() {
     } else {
       request->send(200, "text/plain", "NO");
     }
+  });
+
+  server.on("/alarmStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+    int medIndex = -1;
+    String medName = "";
+
+    if (alarmActive && activeAlarmMedIndex >= 0 && activeAlarmMedIndex < MAX_MEDS) {
+      medIndex = activeAlarmMedIndex + 1;
+      medName = medNames[activeAlarmMedIndex];
+    }
+
+    String json = "{";
+    json += "\"active\":" + String(alarmActive ? "true" : "false") + ",";
+    json += "\"medIndex\":" + String(medIndex) + ",";
+    json += "\"medName\":\"" + jsonEscape(medName) + "\"";
+    json += "}";
+
+    request->send(200, "application/json", json);
   });
 
   server.on("/login", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -662,27 +682,26 @@ void loop() {
     return;
   }
 
-  int currentYear = timeinfo.tm_year + 1900;
-  int currentMonth = timeinfo.tm_mon + 1;
-  int currentDay = timeinfo.tm_mday;
+  int currentWeekday = timeinfo.tm_wday;
+  int currentYear = timeinfo.tm_year;
+  int currentYearDay = timeinfo.tm_yday;
   int currentHour = timeinfo.tm_hour;
   int currentMinute = timeinfo.tm_min;
 
-  if (shouldBuzzNow(currentYear, currentMonth, currentDay, currentHour, currentMinute)) {
-    if (!alarmActive && (currentYear != lastAlarmYear || currentMonth != lastAlarmMonth || 
-                         currentDay != lastAlarmDay || currentHour != lastAlarmHour || 
+  if (shouldBuzzNow(currentWeekday, currentHour, currentMinute)) {
+    if (!alarmActive && (currentYear != lastAlarmYear || currentYearDay != lastAlarmYearDay ||
+                         currentHour != lastAlarmHour ||
                          currentMinute != lastAlarmMinute)) {
       alarmActive = true;
       alarmSilencedByButton = false; 
       alarmStartTimeMs = millis();
       
       lastAlarmYear = currentYear;
-      lastAlarmMonth = currentMonth;
-      lastAlarmDay = currentDay;
+      lastAlarmYearDay = currentYearDay;
       lastAlarmHour = currentHour;
       lastAlarmMinute = currentMinute;
       
-      activeAlarmMedIndex = findMatchingMedIndex(currentYear, currentMonth, currentDay, currentHour, currentMinute);
+      activeAlarmMedIndex = findMatchingMedIndex(currentWeekday, currentHour, currentMinute);
       
       lcd.clear();
       lcd.setCursor(0, 0);
