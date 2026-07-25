@@ -314,20 +314,31 @@ void trackEvent(
 ) {
     if (WiFi.status() != WL_CONNECTED) return;
 
+    String timestamp = "";
+    struct tm timeInfo;
+    if (getLocalTime(&timeInfo)) {
+        char buf[25];
+        snprintf(buf, sizeof(buf), "%04d-%02d-%02dT%02d:%02d:%02d",
+            timeInfo.tm_year + 1900, timeInfo.tm_mon + 1, timeInfo.tm_mday,
+            timeInfo.tm_hour, timeInfo.tm_min, timeInfo.tm_sec);
+        timestamp = String(buf);
+    }
+
     HTTPClient http;
     http.begin(analyticsURL);
     http.addHeader("Content-Type", "application/json");
 
     String json = "{";
-    json += "\"device_id\":\"" + deviceID + "\",";
-    json += "\"username\":\"" + savedUsername + "\",";
-    json += "\"event_name\":\"" + eventName + "\",";
-    json += "\"medicine_name\":\"" + medicineName + "\",";
+    json += "\"timestamp\":\"" + timestamp + "\",";
+    json += "\"event_name\":\"" + jsonEscape(eventName) + "\",";
+    json += "\"username\":\"" + jsonEscape(savedUsername) + "\",";
+    json += "\"device_id\":\"" + jsonEscape(deviceID) + "\",";
+    json += "\"medicine_name\":\"" + jsonEscape(medicineName) + "\",";
     json += "\"box_number\":\"" + String(boxNumber) + "\",";
-    json += "\"status\":\"" + status + "\",";
-    json += "\"value\":\"" + value + "\",";
-    json += "\"error_message\":\"" + errorMessage + "\",";
-    json += "\"firmware_version\":\"" + String(firmwareVersion) + "\"";
+    json += "\"status\":\"" + jsonEscape(status) + "\",";
+    json += "\"value\":\"" + jsonEscape(value) + "\",";
+    json += "\"error_message\":\"" + jsonEscape(errorMessage) + "\",";
+    json += "\"firmware_version\":\"" + jsonEscape(String(firmwareVersion)) + "\"";
     json += "}";
 
     int code = http.POST(json);
@@ -569,6 +580,14 @@ void setup() {
 
   server.serveStatic("/", SPIFFS, "/");
 
+  server.on("/getData", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String savedSSID = readFile(SPIFFS, ssidPath);
+    String savedPass = readFile(SPIFFS, passPath);
+    String savedChatID = readFile(SPIFFS, chatIDPath);
+    String json = "{\"ssid\":\"" + jsonEscape(savedSSID) + "\",\"pass\":\"" + jsonEscape(savedPass) + "\",\"chatid\":\"" + jsonEscape(savedChatID) + "\"}";
+    request->send(200, "application/json", json);
+  });
+
   server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request) {
     int params = request->params();
     for(int i=0; i<params; i++){
@@ -599,7 +618,12 @@ void setup() {
     for (int i = 0; i < medCount; i++) { medTimeCount[i] = timeManager.splitAndStoreTimes(medTimes[i], i); }
     saveMedicines();
     request->send(200, "text/plain", "OK");
-    trackEvent("medicine_added", "", -1, "success", "medCount=" + String(medCount));
+    String allMedNames = "";
+    for (int i = 0; i < medCount; i++) {
+        if (i > 0) allMedNames += ", ";
+        allMedNames += medNames[i];
+    }
+    trackEvent("medicine_added", allMedNames, -1, "success", "medCount=" + String(medCount));
   });
 
   server.on("/medOne", HTTP_POST, [](AsyncWebServerRequest *request) {
@@ -642,7 +666,7 @@ void setup() {
     if (box < 1) box = 1; if (box > MAX_MEDS) box = MAX_MEDS;
     servoCtrl.fillBox(box);
     request->send(200, "text/plain", "Filling box " + String(box));
-    trackEvent("box_opened", "", box, "success", "manual_fill");
+    trackEvent("box_opened", (box >= 1 && box <= MAX_MEDS) ? medNames[box - 1] : "", box, "success", "manual_fill");
   });
 
   server.on("/filled", HTTP_POST, [](AsyncWebServerRequest *request) {
