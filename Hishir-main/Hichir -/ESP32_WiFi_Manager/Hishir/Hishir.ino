@@ -1,7 +1,9 @@
 #include <Arduino.h>
 #include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <AsyncTCP.h>
+#include <WebServer.h>
+#include <DNSServer.h>
+#include <ESPmDNS.h>
+#include <Preferences.h>
 #include "SPIFFS.h"
 #include "time.h"
 #include "LiquidCrystal_I2C.h"
@@ -13,13 +15,20 @@
 #include <WiFiClientSecure.h>
 #include "Buzzer.h"
 #include "KeypadController.h"
-#include "TimeManager.h"  
+#include "TimeManager.h"
 #include "DisplayManager.h"
 #include "mbedtls/sha256.h"
 
 using ServoImpl = Servo;
 
-AsyncWebServer server(80);
+WebServer server(80);
+DNSServer dnsServer;
+Preferences preferences;
+
+const byte DNS_PORT = 53;
+const char* AP_SSID = "ՀԻՇԻՐ";
+const char* AP_PASSWORD = "++++----";
+
 const char login_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html lang="hy">
@@ -199,7 +208,7 @@ function register() {
 // PINS
 static const int buzzerPin = 18;
 static const int servoPin = 15;
-static const int buttonPin = 4; 
+// static const int buttonPin = 4; // չի օգտագործվում
 
 const char* PARAM_INPUT_1 = "ssid";
 const char* PARAM_INPUT_2 = "pass";
@@ -303,6 +312,11 @@ bool dButtonIsPressed = false;
 // ✅ ANALYTICS FUNCTION
 String analyticsURL = "https://script.google.com/macros/s/AKfycbxTKi5dCg9P0m4u9q3rGK6fXFEgB4b-CxMKDOw57mfNvUELvahtkS83EqXsgJZ-6XVBHA/exec";
 String deviceID = "HISHIR_01";
+
+bool requestCameThroughAP() {
+    IPAddress local = server.client().localIP();
+    return local == WiFi.softAPIP();
+}
 
 void trackEvent(
     String eventName,
@@ -423,12 +437,14 @@ static int findMatchingMedIndex(int weekdayNow, int hNow, int mNow) {
 void setup() {
   Serial.begin(115200);
 
+  preferences.begin("wifi", false);
+  
   initSPIFFS();
   loadMedicines();
   
   buzzerControll.setPin(buzzerPin);
   buzzerControll.init();
-  pinMode(buttonPin, INPUT_PULLUP);
+  // pinMode(buttonPin, INPUT_PULLUP);
   pinMode(ledPin1, OUTPUT);
   pinMode(ledPin2, OUTPUT);
 
@@ -438,8 +454,9 @@ void setup() {
 
   servoCtrl.begin();
   
-  ssid = readFile(SPIFFS, ssidPath);
-  pass = readFile(SPIFFS, passPath);
+  ssid = preferences.getString("ssid", "");
+  pass = preferences.getString("pass", "");
+  
   ip = readFile(SPIFFS, ipPath);
   gateway = readFile(SPIFFS, gatewayPath);
   chatID = readFile(SPIFFS, chatIDPath);
@@ -455,246 +472,1036 @@ void setup() {
   Serial.print("AP IP address: ");
   Serial.println(WiFi.softAPIP());
 
-  if(WiFi.status() == WL_CONNECTED){
-    Serial.println("\nConnected!");
-    Serial.print("IP: ");
-    Serial.println(WiFi.localIP());
+  dnsServer.start(
+      DNS_PORT,
+      "*",
+      WiFi.softAPIP()
+  );
 
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("IP:");
-    lcd.setCursor(0,1);
-    lcd.print(WiFi.localIP().toString());
+  //trackEvent("device_started", "", -1, "success", "boot");
 
-    trackEvent("wifi_connected", "", -1, "success", WiFi.localIP().toString());
+  if (ssid != "") {
 
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    checkForUpdate();
-}
-  trackEvent("device_started", "", -1, "success", "boot");
-
-  if(ssid != "") {
     Serial.println("Saved SSID: " + ssid);
     Serial.println("Saved PASS: " + pass);
 
     WiFi.begin(ssid.c_str(), pass.c_str());
+
     Serial.print("Connecting to WiFi");
 
     int attempts = 0;
-    while(WiFi.status() != WL_CONNECTED && attempts < 30){
+
+    while (
+        WiFi.status() != WL_CONNECTED &&
+        attempts < 30
+    ) {
         delay(500);
         Serial.print(".");
         attempts++;
     }
 
-    if(WiFi.status() == WL_CONNECTED){
+
+    // ==========================================
+    // SUCCESSFULLY CONNECTED TO HOME WI-FI
+    // ==========================================
+
+    if (WiFi.status() == WL_CONNECTED) {
+
         Serial.println("\nConnected!");
+
         Serial.print("IP: ");
         Serial.println(WiFi.localIP());
-        
 
-        trackEvent("wifi_connected", "", -1, "success", WiFi.localIP().toString());
 
-        configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+        // --------------------------------------
+        // START mDNS
+        // http://mydevice.local
+        // --------------------------------------
+
+        if (MDNS.begin("mydevice")) {
+
+            Serial.println("mDNS started");
+            Serial.println("Open: http://mydevice.local");
+
+            MDNS.addService(
+                "http",
+                "tcp",
+                80
+            );
+
+        } else {
+
+            Serial.println("mDNS failed to start");
+        }
+
+
+        // --------------------------------------
+        // ANALYTICS
+        // --------------------------------------
+
+        trackEvent(
+            "wifi_connected",
+            "",
+            -1,
+            "success",
+            WiFi.localIP().toString()
+        );
+
+
+        // --------------------------------------
+        // TIME
+        // --------------------------------------
+
+        configTime(
+            gmtOffset_sec,
+            daylightOffset_sec,
+            ntpServer
+        );
+
+
+        // --------------------------------------
+        // OTA UPDATE
+        // --------------------------------------
+
         checkForUpdate();
+
+
     } else {
+
+        // ======================================
+        // FAILED TO CONNECT
+        // AP + Captive Portal still work
+        // ======================================
+
         Serial.println("\nFAILED TO CONNECT");
-        Serial.println("Status: " + String(WiFi.status()));
+
+        Serial.print("Status: ");
+        Serial.println(WiFi.status());
+
+        Serial.println("Connect to HISHIR Wi-Fi to configure network.");
     }
-  }
+}
 
   // === ROUTES ===
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (WiFi.status() == WL_CONNECTED) {
-      request->send_P(200, "text/html", login_html);
-    } else {
-      request->send(SPIFFS, "/wifimanager.html", "text/html; charset=utf-8");
+    // ============================================================
+  // === ROUTES - STANDARD WebServer.h ==========================
+  // ============================================================
+
+  // ------------------------------------------------------------
+  // ROOT "/"
+  //
+  // ESP32 AP-ից բացելու դեպքում -> Wi-Fi configuration
+  // Home Wi-Fi/LAN-ից բացելու դեպքում -> Login/Main environment
+  // ------------------------------------------------------------
+  server.on("/", HTTP_GET, []() {
+
+    bool connectedToHomeWiFi = (WiFi.status() == WL_CONNECTED);
+
+    // Որ IP interface-ով է եկել request-ը
+    IPAddress requestLocalIP = server.client().localIP();
+    bool openedThroughAP = (requestLocalIP == WiFi.softAPIP());
+
+    Serial.println("=== ROOT REQUEST ===");
+    Serial.print("Request local IP: ");
+    Serial.println(requestLocalIP);
+    Serial.print("AP IP: ");
+    Serial.println(WiFi.softAPIP());
+    Serial.print("STA IP: ");
+    Serial.println(WiFi.localIP());
+    Serial.print("WiFi connected: ");
+    Serial.println(connectedToHomeWiFi ? "YES" : "NO");
+    Serial.print("Opened through AP: ");
+    Serial.println(openedThroughAP ? "YES" : "NO");
+
+    // ESP32-ի սեփական AP-ից -> provisioning
+    if (openedThroughAP || !connectedToHomeWiFi) {
+
+      File file = SPIFFS.open("/wifimanager.html", "r");
+
+      if (!file) {
+        server.send(
+          500,
+          "text/plain; charset=utf-8",
+          "Wi-Fi configuration page not found"
+        );
+        return;
+      }
+
+      server.streamFile(
+        file,
+        "text/html; charset=utf-8"
+      );
+
+      file.close();
+      return;
     }
+
+    // Home Wi-Fi/LAN-ից -> login page
+    server.send_P(
+      200,
+      "text/html; charset=utf-8",
+      login_html
+    );
   });
 
-  server.on("/is_registered", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  // ============================================================
+  // IS REGISTERED
+  // ============================================================
+
+  server.on("/is_registered", HTTP_GET, []() {
+
     if (savedUsername != "") {
-      request->send(200, "text/plain", "YES");
+      server.send(
+        200,
+        "text/plain",
+        "YES"
+      );
     } else {
-      request->send(200, "text/plain", "NO");
+      server.send(
+        200,
+        "text/plain",
+        "NO"
+      );
     }
   });
 
-  server.on("/alarmStatus", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  // ============================================================
+  // ALARM STATUS
+  // ============================================================
+
+  server.on("/alarmStatus", HTTP_GET, []() {
+
     int medIndex = -1;
     String medName = "";
 
-    if (alarmActive && activeAlarmMedIndex >= 0 && activeAlarmMedIndex < MAX_MEDS) {
+    if (
+      alarmActive &&
+      activeAlarmMedIndex >= 0 &&
+      activeAlarmMedIndex < MAX_MEDS
+    ) {
       medIndex = activeAlarmMedIndex + 1;
       medName = medNames[activeAlarmMedIndex];
     }
 
     String json = "{";
-    json += "\"active\":" + String(alarmActive ? "true" : "false") + ",";
-    json += "\"medIndex\":" + String(medIndex) + ",";
-    json += "\"medName\":\"" + jsonEscape(medName) + "\"";
+
+    json += "\"active\":";
+    json += alarmActive ? "true" : "false";
+
+    json += ",\"medIndex\":";
+    json += String(medIndex);
+
+    json += ",\"medName\":\"";
+    json += jsonEscape(medName);
+    json += "\"";
+
     json += "}";
 
-    request->send(200, "application/json", json);
+    server.send(
+      200,
+      "application/json",
+      json
+    );
   });
 
-  server.on("/login", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String user = request->hasParam("user") ? request->getParam("user")->value() : "";
-    String pass = request->hasParam("pass") ? request->getParam("pass")->value() : "";
-    user.trim(); pass.trim();
 
-    String hashedInput = sha256(pass);
+  // ============================================================
+  // LOGIN
+  // ============================================================
 
-    if(user == savedUsername && hashedInput == savedPassword){
+  server.on("/login", HTTP_GET, []() {
+
+    String user = "";
+    String loginPass = "";
+
+    if (server.hasArg("user")) {
+      user = server.arg("user");
+    }
+
+    if (server.hasArg("pass")) {
+      loginPass = server.arg("pass");
+    }
+
+    user.trim();
+    loginPass.trim();
+
+    String hashedInput = sha256(loginPass);
+
+    if (
+      user == savedUsername &&
+      hashedInput == savedPassword
+    ) {
+
       isLoggedIn = true;
-      request->send(200, "text/plain", "OK");
-      trackEvent("user_login", "", -1, "success");
+
+      server.send(
+        200,
+        "text/plain",
+        "OK"
+      );
+
+      trackEvent(
+        "user_login",
+        "",
+        -1,
+        "success"
+      );
+
     } else {
-      request->send(200, "text/plain", "ERROR");
-      trackEvent("login_failed", "", -1, "fail", "", "wrong_credentials");
+
+      server.send(
+        200,
+        "text/plain",
+        "ERROR"
+      );
+
+      trackEvent(
+        "login_failed",
+        "",
+        -1,
+        "fail",
+        "",
+        "wrong_credentials"
+      );
     }
   });
 
-  server.on("/register", HTTP_POST, [](AsyncWebServerRequest *request) {
-    String newUser = request->hasParam("user") ? request->getParam("user")->value() : "";
-    String newPass = request->hasParam("pass") ? request->getParam("pass")->value() : "";
-    newUser.trim(); newPass.trim();
 
-    if (newUser != "" && newPass != "") {
-      writeFile(SPIFFS, userPath, newUser.c_str());
+  // ============================================================
+  // REGISTER
+  // ============================================================
+
+  server.on("/register", HTTP_POST, []() {
+
+    String newUser = "";
+    String newPass = "";
+
+    if (server.hasArg("user")) {
+      newUser = server.arg("user");
+    }
+
+    if (server.hasArg("pass")) {
+      newPass = server.arg("pass");
+    }
+
+    newUser.trim();
+    newPass.trim();
+
+    if (
+      newUser != "" &&
+      newPass != ""
+    ) {
+
+      writeFile(
+        SPIFFS,
+        userPath,
+        newUser.c_str()
+      );
+
       String hashedPass = sha256(newPass);
-      writeFile(SPIFFS, passwordPath, hashedPass.c_str());
-      savedPassword = hashedPass;
+
+      writeFile(
+        SPIFFS,
+        passwordPath,
+        hashedPass.c_str()
+      );
+
       savedUsername = newUser;
-      request->send(200, "text/plain", "REG_OK");
-      trackEvent("user_registered", "", -1, "success");
+      savedPassword = hashedPass;
+
+      server.send(
+        200,
+        "text/plain",
+        "REG_OK"
+      );
+
+      trackEvent(
+        "user_registered",
+        "",
+        -1,
+        "success"
+      );
+
     } else {
-      request->send(400, "text/plain", "REG_FAILED");
+
+      server.send(
+        400,
+        "text/plain",
+        "REG_FAILED"
+      );
     }
   });
 
-  server.on("/index", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if(!isLoggedIn){ request->redirect("/"); return; }
-    request->send(SPIFFS, "/index.html", "text/html; charset=utf-8");
-  });
 
-  server.serveStatic("/", SPIFFS, "/");
+  // ============================================================
+  // INDEX / MAIN DASHBOARD
+  // ============================================================
 
-  server.on("/getData", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String savedSSID = readFile(SPIFFS, ssidPath);
-    String savedPass = readFile(SPIFFS, passPath);
-    String savedChatID = readFile(SPIFFS, chatIDPath);
-    String json = "{\"ssid\":\"" + jsonEscape(savedSSID) + "\",\"pass\":\"" + jsonEscape(savedPass) + "\",\"chatid\":\"" + jsonEscape(savedChatID) + "\"}";
-    request->send(200, "application/json", json);
-  });
+  server.on("/index", HTTP_GET, []() {
 
-  server.on("/save", HTTP_POST, [](AsyncWebServerRequest *request) {
-    int params = request->params();
-    for(int i=0; i<params; i++){
-      const AsyncWebParameter* p = request->getParam(i);
-      if(p->isPost()){
-        if (p->name() == PARAM_INPUT_1) { ssid = p->value().c_str(); writeFile(SPIFFS, ssidPath, ssid.c_str()); }
-        if (p->name() == PARAM_INPUT_2) { pass = p->value().c_str(); writeFile(SPIFFS, passPath, pass.c_str()); }
-        if (p->name() == PARAM_INPUT_3) { ip = p->value().c_str(); writeFile(SPIFFS, ipPath, ip.c_str()); }
-        if (p->name() == PARAM_INPUT_4) { gateway = p->value().c_str(); writeFile(SPIFFS, gatewayPath, gateway.c_str()); }
-        if (p->name() == PARAM_INPUT_5) { chatID = p->value().c_str(); chatID.trim(); writeFile(SPIFFS, chatIDPath, chatID.c_str()); }
-      }
+    if (!isLoggedIn) {
+      server.sendHeader(
+        "Location",
+        "/",
+        true
+      );
+
+      server.send(
+        302,
+        "text/plain",
+        ""
+      );
+
+      return;
     }
-    request->send(200, "text/plain", "Տվյալները պահպանվեցին։ Սարքը վերագործարկվում է...");
-    delay(2000);
+
+    File file = SPIFFS.open("/index.html", "r");
+
+    if (!file) {
+      server.send(
+        404,
+        "text/plain",
+        "index.html not found"
+      );
+      return;
+    }
+
+    server.streamFile(
+      file,
+      "text/html; charset=utf-8"
+    );
+
+    file.close();
+  });
+
+
+  // ============================================================
+  // GET SAVED SETTINGS
+  // ============================================================
+
+  server.on("/getData", HTTP_GET, []() {
+
+    /*
+      Wi-Fi SSID/password-ը հիմա Preferences-ից ենք կարդում։
+
+      chatID-ն շարունակում ենք պահել SPIFFS-ում,
+      որովհետև այն Wi-Fi provisioning credential չէ։
+    */
+
+    String savedSSID =
+      preferences.getString("ssid", "");
+
+    String savedPass =
+      preferences.getString("pass", "");
+
+    String savedChatID =
+      readFile(SPIFFS, chatIDPath);
+
+    String json = "{";
+
+    json += "\"ssid\":\"";
+    json += jsonEscape(savedSSID);
+    json += "\",";
+
+    json += "\"pass\":\"";
+    json += jsonEscape(savedPass);
+    json += "\",";
+
+    json += "\"chatid\":\"";
+    json += jsonEscape(savedChatID);
+    json += "\"";
+
+    json += "}";
+
+    server.send(
+      200,
+      "application/json",
+      json
+    );
+  });
+
+
+  // ============================================================
+  // SAVE SETTINGS
+  //
+  // SSID + PASSWORD -> Preferences
+  // chatID           -> SPIFFS
+  // հետո restart
+  // ============================================================
+
+  server.on("/save", HTTP_POST, []() {
+
+    String newSSID = "";
+    String newPass = "";
+
+    if (server.hasArg(PARAM_INPUT_1)) {
+      newSSID = server.arg(PARAM_INPUT_1);
+      newSSID.trim();
+    }
+
+    if (server.hasArg(PARAM_INPUT_2)) {
+      newPass = server.arg(PARAM_INPUT_2);
+    }
+
+    // ----------------------------------------------------------
+    // SSID
+    // ----------------------------------------------------------
+
+    if (newSSID != "") {
+
+      ssid = newSSID;
+
+      preferences.putString(
+        "ssid",
+        ssid
+      );
+
+      Serial.print("Saved SSID: ");
+      Serial.println(ssid);
+    }
+
+
+    // ----------------------------------------------------------
+    // PASSWORD
+    // ----------------------------------------------------------
+
+    if (server.hasArg(PARAM_INPUT_2)) {
+
+      pass = newPass;
+
+      preferences.putString(
+        "pass",
+        pass
+      );
+
+      Serial.println("Wi-Fi password saved");
+    }
+
+
+    // ----------------------------------------------------------
+    // IP - եթե քո HTML-ը դեռ ուղարկում է
+    // ----------------------------------------------------------
+
+    if (server.hasArg(PARAM_INPUT_3)) {
+
+      ip = server.arg(PARAM_INPUT_3);
+
+      writeFile(
+        SPIFFS,
+        ipPath,
+        ip.c_str()
+      );
+    }
+
+
+    // ----------------------------------------------------------
+    // Gateway
+    // ----------------------------------------------------------
+
+    if (server.hasArg(PARAM_INPUT_4)) {
+
+      gateway = server.arg(PARAM_INPUT_4);
+
+      writeFile(
+        SPIFFS,
+        gatewayPath,
+        gateway.c_str()
+      );
+    }
+
+
+    // ----------------------------------------------------------
+    // Telegram chat ID
+    // ----------------------------------------------------------
+
+    if (server.hasArg(PARAM_INPUT_5)) {
+
+      chatID = server.arg(PARAM_INPUT_5);
+      chatID.trim();
+
+      writeFile(
+        SPIFFS,
+        chatIDPath,
+        chatID.c_str()
+      );
+    }
+
+
+    // ----------------------------------------------------------
+    // Validate
+    // ----------------------------------------------------------
+
+    if (ssid == "") {
+
+      server.send(
+        400,
+        "text/plain; charset=utf-8",
+        "SSID-ը դատարկ է"
+      );
+
+      return;
+    }
+
+
+    server.send(
+      200,
+      "text/plain; charset=utf-8",
+      "Տվյալները պահպանվեցին։ Սարքը վերագործարկվում է..."
+    );
+
+    delay(1500);
+
     ESP.restart();
   });
 
-  server.on("/meds", HTTP_POST, [](AsyncWebServerRequest *request) {
-    int receivedMedCount = request->hasParam("medCount", true) ? request->getParam("medCount", true)->value().toInt() : 0;
-    if (receivedMedCount < 0) receivedMedCount = 0;
-    if (receivedMedCount > MAX_MEDS) receivedMedCount = MAX_MEDS;
+
+  // ============================================================
+  // SAVE ALL MEDICINES
+  // ============================================================
+
+  server.on("/meds", HTTP_POST, []() {
+
+    int receivedMedCount = 0;
+
+    if (server.hasArg("medCount")) {
+      receivedMedCount =
+        server.arg("medCount").toInt();
+    }
+
+    if (receivedMedCount < 0) {
+      receivedMedCount = 0;
+    }
+
+    if (receivedMedCount > MAX_MEDS) {
+      receivedMedCount = MAX_MEDS;
+    }
+
     medCount = receivedMedCount;
-    for (int i = 0; i < MAX_MEDS; i++) { medNames[i] = ""; medTimes[i] = ""; medTimeCount[i] = 0; }
+
+
+    // Clear old medicine data
+    for (int i = 0; i < MAX_MEDS; i++) {
+
+      medNames[i] = "";
+      medTimes[i] = "";
+      medTimeCount[i] = 0;
+    }
+
+
+    // Read POST arguments
     for (int i = 1; i <= medCount; i++) {
-      if (request->hasParam("medName_" + String(i), true)) medNames[i - 1] = request->getParam("medName_" + String(i), true)->value();
-      if (request->hasParam("times_" + String(i), true)) medTimes[i - 1] = request->getParam("times_" + String(i), true)->value();
+
+      String nameKey =
+        "medName_" + String(i);
+
+      String timesKey =
+        "times_" + String(i);
+
+
+      if (server.hasArg(nameKey)) {
+
+        medNames[i - 1] =
+          server.arg(nameKey);
+      }
+
+
+      if (server.hasArg(timesKey)) {
+
+        medTimes[i - 1] =
+          server.arg(timesKey);
+      }
     }
-    for (int i = 0; i < medCount; i++) { medTimeCount[i] = timeManager.splitAndStoreTimes(medTimes[i], i); }
+
+
+    // Parse medicine times
+    for (int i = 0; i < medCount; i++) {
+
+      medTimeCount[i] =
+        timeManager.splitAndStoreTimes(
+          medTimes[i],
+          i
+        );
+    }
+
+
     saveMedicines();
-    request->send(200, "text/plain", "OK");
+
+
+    server.send(
+      200,
+      "text/plain",
+      "OK"
+    );
+
+
     String allMedNames = "";
+
     for (int i = 0; i < medCount; i++) {
-        if (i > 0) allMedNames += ", ";
-        allMedNames += medNames[i];
+
+      if (i > 0) {
+        allMedNames += ", ";
+      }
+
+      allMedNames += medNames[i];
     }
-    trackEvent("medicine_added", allMedNames, -1, "success", "medCount=" + String(medCount));
+
+
+    trackEvent(
+      "medicine_added",
+      allMedNames,
+      -1,
+      "success",
+      "medCount=" + String(medCount)
+    );
   });
 
-  server.on("/medOne", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (!request->hasParam(PARAM_MED_INDEX, true)) { request->send(400, "text/plain", "Missing medIndex"); return; }
-    int idx1 = request->getParam(PARAM_MED_INDEX, true)->value().toInt();
-    if (idx1 < 1 || idx1 > MAX_MEDS) { request->send(400, "text/plain", "Invalid medIndex"); return; }
-    
-    String name = request->hasParam("medName_1", true) ? request->getParam("medName_1", true)->value() : "";
-    String times = request->hasParam("times_1", true) ? request->getParam("times_1", true)->value() : "";
-    
-    int count = request->hasParam("count_1", true) ? request->getParam("count_1", true)->value().toInt() : 0;
-    medCounts[idx1 - 1] = count; 
 
-    timeManager.updateSingleMedicine(idx1 - 1, name, times);
+  // ============================================================
+  // UPDATE ONE MEDICINE
+  // ============================================================
+
+  server.on("/medOne", HTTP_POST, []() {
+
+    if (!server.hasArg(PARAM_MED_INDEX)) {
+
+      server.send(
+        400,
+        "text/plain",
+        "Missing medIndex"
+      );
+
+      return;
+    }
+
+
+    int idx1 =
+      server.arg(PARAM_MED_INDEX).toInt();
+
+
+    if (
+      idx1 < 1 ||
+      idx1 > MAX_MEDS
+    ) {
+
+      server.send(
+        400,
+        "text/plain",
+        "Invalid medIndex"
+      );
+
+      return;
+    }
+
+
+    String name = "";
+
+    String times = "";
+
+    int count = 0;
+
+
+    if (server.hasArg("medName_1")) {
+      name =
+        server.arg("medName_1");
+    }
+
+
+    if (server.hasArg("times_1")) {
+      times =
+        server.arg("times_1");
+    }
+
+
+    if (server.hasArg("count_1")) {
+      count =
+        server.arg("count_1").toInt();
+    }
+
+
+    medCounts[idx1 - 1] = count;
+
+
+    timeManager.updateSingleMedicine(
+      idx1 - 1,
+      name,
+      times
+    );
+
+
     saveMedicines();
-    request->send(200, "text/plain", "OK");
-    trackEvent("medicine_updated", name, idx1, "success", "count=" + String(count));
+
+
+    server.send(
+      200,
+      "text/plain",
+      "OK"
+    );
+
+
+    trackEvent(
+      "medicine_updated",
+      name,
+      idx1,
+      "success",
+      "count=" + String(count)
+    );
   });
 
-  server.on("/medsList", HTTP_GET, [](AsyncWebServerRequest *request) {
+
+  // ============================================================
+  // MEDICINES LIST
+  // ============================================================
+
+  server.on("/medsList", HTTP_GET, []() {
+
     String json = "{\"items\":[";
+
     bool first = true;
+
+
     for (int i = 0; i < medCount; i++) {
-      if (medNames[i] == "" && medCounts[i] <= 0 && medTimeCount[i] <= 0) continue;
-      if (!first) json += ",";
+
+      if (
+        medNames[i] == "" &&
+        medCounts[i] <= 0 &&
+        medTimeCount[i] <= 0
+      ) {
+        continue;
+      }
+
+
+      if (!first) {
+        json += ",";
+      }
+
       first = false;
-      json += "{\"box\":" + String(i + 1);
-      json += ",\"name\":\"" + jsonEscape(medNames[i]) + "\"";
-      json += ",\"count\":" + String(medCounts[i]);
+
+
+      json += "{\"box\":";
+      json += String(i + 1);
+
+      json += ",\"name\":\"";
+      json += jsonEscape(medNames[i]);
+      json += "\"";
+
+      json += ",\"count\":";
+      json += String(medCounts[i]);
+
       json += "}";
     }
+
+
     json += "]}";
-    request->send(200, "application/json", json);
+
+
+    server.send(
+      200,
+      "application/json",
+      json
+    );
   });
 
-  server.on("/fill", HTTP_GET, [](AsyncWebServerRequest *request) {
-    if (alarmActive) { request->send(409, "text/plain", "Alarm active"); return; }
-    if (!request->hasParam("box")) { request->send(400, "text/plain", "Missing box"); return; }
-    int box = request->getParam("box")->value().toInt();
-    if (box < 1) box = 1; if (box > MAX_MEDS) box = MAX_MEDS;
+
+  // ============================================================
+  // MANUAL BOX FILL / OPEN
+  // ============================================================
+
+  server.on("/fill", HTTP_GET, []() {
+
+    if (alarmActive) {
+
+      server.send(
+        409,
+        "text/plain",
+        "Alarm active"
+      );
+
+      return;
+    }
+
+
+    if (!server.hasArg("box")) {
+
+      server.send(
+        400,
+        "text/plain",
+        "Missing box"
+      );
+
+      return;
+    }
+
+
+    int box =
+      server.arg("box").toInt();
+
+
+    if (box < 1) {
+      box = 1;
+    }
+
+    if (box > MAX_MEDS) {
+      box = MAX_MEDS;
+    }
+
+
     servoCtrl.fillBox(box);
-    request->send(200, "text/plain", "Filling box " + String(box));
-    trackEvent("box_opened", (box >= 1 && box <= MAX_MEDS) ? medNames[box - 1] : "", box, "success", "manual_fill");
+
+
+    server.send(
+      200,
+      "text/plain",
+      "Filling box " + String(box)
+    );
+
+
+    String currentName = "";
+
+    if (
+      box >= 1 &&
+      box <= MAX_MEDS
+    ) {
+      currentName =
+        medNames[box - 1];
+    }
+
+
+    trackEvent(
+      "box_opened",
+      currentName,
+      box,
+      "success",
+      "manual_fill"
+    );
   });
 
-  server.on("/filled", HTTP_POST, [](AsyncWebServerRequest *request) {
-    if (alarmActive) { request->send(409, "text/plain", "Alarm active"); return; }
+
+  // ============================================================
+  // BOX FILLED
+  // ============================================================
+
+  server.on("/filled", HTTP_POST, []() {
+
+    if (alarmActive) {
+
+      server.send(
+        409,
+        "text/plain",
+        "Alarm active"
+      );
+
+      return;
+    }
+
+
     servoCtrl.rest();
-    request->send(200, "text/plain", "OK");
+
+
+    server.send(
+      200,
+      "text/plain",
+      "OK"
+    );
   });
 
+
+  // ============================================================
+  // STATIC FILES
+  //
+  // CSS / JS / images և այլն
+  // ============================================================
+
+  server.serveStatic(
+    "/",
+    SPIFFS,
+    "/"
+  );
+
+
+  // ============================================================
+  // NOT FOUND / CAPTIVE PORTAL
+  // ============================================================
+
+  server.onNotFound([]() {
+
+    IPAddress requestLocalIP =
+      server.client().localIP();
+
+    bool openedThroughAP =
+      (requestLocalIP == WiFi.softAPIP());
+
+
+    // ----------------------------------------------------------
+    // ESP32 AP-ից եկած ցանկացած անհայտ URL
+    // redirect դեպի provisioning page
+    // ----------------------------------------------------------
+
+    if (openedThroughAP) {
+
+      String redirectURL =
+        "http://" +
+        WiFi.softAPIP().toString() +
+        "/";
+
+
+      server.sendHeader(
+        "Location",
+        redirectURL,
+        true
+      );
+
+
+      server.send(
+        302,
+        "text/plain",
+        ""
+      );
+
+      return;
+    }
+
+
+    // ----------------------------------------------------------
+    // Home Wi-Fi/LAN-ից սովորական 404
+    // ----------------------------------------------------------
+
+    server.send(
+      404,
+      "text/plain; charset=utf-8",
+      "404 - Not Found"
+    );
+  });
+
+
+  // ============================================================
+  // START WEB SERVER
+  // ============================================================
   server.begin();
+  Serial.println("HTTP server started");
+  
 }
 
 void loop() {
+  dnsServer.processNextRequest();
+  server.handleClient();
   servoCtrl.tick(); 
 
   char key = keypadCtrl.getKey();
 
-  // 'D' կոճակի տրամաբանություն՝ 5 անգամ սեղմելիս հաշվի ջնջում և ռեսեթ
-  if (key == '7 ') {
+  // '7' կոճակի տրամաբանություն՝ 5 անգամ սեղմելիս հաշվի ջնջում և ռեսեթ
+  if (key == '7') {
     unsigned long now = millis();
     if (now - lastDPressTime > 1500) {
       dPressCount = 0;
     }
     dPressCount++;
     lastDPressTime = now;
-    Serial.printf("'D' կոճակը սեղմվեց %d անգամ\n", dPressCount);
+    Serial.printf("'7' կոճակը սեղմվեց %d անգամ\n", dPressCount);
 
     if (dPressCount >= 5) {
-      Serial.println("Ռեսեթ 'D' կոճակով... Տվյալները ջնջվում են:");
+      Serial.println("Ռեսեթ '7' կոճակով... Տվյալները ջնջվում են:");
       
       SPIFFS.remove(userPath);
       SPIFFS.remove(passwordPath);
@@ -712,16 +1519,18 @@ void loop() {
     }
   }
 
-  if (key != '\0' && key != 'D') {
+  if (key != '\0' && key != '7') {
     dPressCount = 0;
   }
 
   struct tm timeinfo;
-  if (!getLocalTime(&timeinfo)) {
-    delay(10); 
-    return;
+  bool hasTime = getLocalTime(&timeinfo);
+  if (!hasTime && WiFi.status() == WL_CONNECTED) {
+    timeManager.syncTimeIfNeeded();
+    hasTime = getLocalTime(&timeinfo);
   }
 
+  if (hasTime) {
   int currentWeekday = timeinfo.tm_wday;
   int currentYear = timeinfo.tm_year;
   int currentYearDay = timeinfo.tm_yday;
@@ -769,6 +1578,7 @@ void loop() {
       
       sendTelegramMessage(startMsg);
     }
+  }
   }
 
   if (alarmActive) {
@@ -828,10 +1638,13 @@ void loop() {
       digitalWrite(ledPin2, LOW);
     }
     
-    // ✅ Բզզիչի անջատում '*' կոճակով (ըստ պահանջի)
+    // ✅ Բզզիչի և երկու լուսադիոդների անջատում '*' կոճակով (ըստ պահանջի)
     if (key == '*') {
       alarmActive = false;
       alarmSilencedByButton = false;
+      buzzerControll.off();
+      digitalWrite(ledPin1, LOW);
+      digitalWrite(ledPin2, LOW);
       servoCtrl.rest();
     
       if (activeAlarmMedIndex != -1) {
@@ -855,5 +1668,12 @@ void loop() {
       lcd.clear();
       displayManager.update();
     }
+  }
+
+  // ⏰ Ժամացույցը միշտ էկրանին պահելու համար (երբ ազդանշանը ակտիվ չէ)
+  static unsigned long lastClockRefreshMs = 0;
+  if (!alarmActive && millis() - lastClockRefreshMs >= 1000) {
+    lastClockRefreshMs = millis();
+    displayManager.update();
   }
 }
